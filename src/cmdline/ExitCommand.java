@@ -7,13 +7,12 @@ public class ExitCommand implements Command
 	String name;
 	public void handle(Client c, String[] cmd)
 	{
-		if(cmd.length > 1 && cmd[1].equals("?"))
-			c.println(usage());
-		else
+		if(cmd.length == 1)
 		{
 			c.println("Client exiting.");
 			System.exit(0);
 		}
+		c.println(usage());
 	}
 	
 	public String usage()

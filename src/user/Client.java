@@ -12,8 +12,8 @@ public class Client
 	public Client()
 	{
 		p = new Parser();
-		p.add("exit", new ExitCommand());
-		p.add("help", new HelpCommand());
+		p.add("exit,quit", new ExitCommand());
+		p.add("help,?", new HelpCommand());
 		p.add("connect", new ConnectCommand());
 	}
 	
