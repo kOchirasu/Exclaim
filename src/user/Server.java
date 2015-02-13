@@ -36,11 +36,11 @@ public class Server implements Runnable
 				System.out.println("Chat connection established to " + cCon.getRemoteSocketAddress());
 				das = new DataOutputStream(cCon.getOutputStream());
 				das.writeUTF("My first message sent :3");
-				break;
 			}
 			catch (IOException ex)
 			{
 				ex.printStackTrace();
+				System.out.println("S> Exclaim Chat Server shutdown...");
 				break;
 			}
 		}

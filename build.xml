@@ -1,7 +1,5 @@
+<!-- build.xml for Exclaim-->
 <project default="compile">
-
-  <!-- build.xml for Exclaim-->
-
   <target name="compile" description="compile my code">
     <mkdir dir="build" />
     <javac srcdir="src" destdir="build" debug="true" debuglevel="lines,source" includeantruntime="false" />
@@ -12,8 +10,7 @@
     <mkdir dir="build" />
   </target>
 
-  <target name="run" depends="compile" 
-    description="run Exclaim chat client">
+  <target name="run" depends="compile" description="run Exclaim chat client">
     <java classpath="build" classname="user.Program" />
   </target>
 </project>

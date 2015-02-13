@@ -17,6 +17,7 @@ public class Client
 	
 	public Client()
 	{
+		cList = new HashMap<>();
 		p = new Parser();
 		p.add("exit,quit", new ExitCommand());
 		p.add("help,?", new HelpCommand());
