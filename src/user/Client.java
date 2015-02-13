@@ -19,10 +19,9 @@ public class Client
 	
 	public void run() throws IOException
 	{
-		/*Connector c = new Connector();
-		c.init();*/
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 		String command;
+		println("Exclaim Chat Client Started...");
 		while(true)
 		{
 			command = br.readLine();
@@ -32,17 +31,10 @@ public class Client
 	
 	public void print(String s)
 	{
-		System.out.print(s);
+		System.out.print("C> " + s);
 	}
 	public void println(String s)
 	{
-		System.out.println(s);
-	}
-	
-	public static void main(String[] args) throws IOException
-	{	
-		Client c = new Client();
-		System.out.println("Exclaim Chat Client Started...");
-		c.run();
+		System.out.println("C> " + s);
 	}
 }

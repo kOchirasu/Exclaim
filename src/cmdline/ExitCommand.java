@@ -9,7 +9,7 @@ public class ExitCommand implements Command
 	{
 		if(cmd.length == 1)
 		{
-			c.println("Client exiting.");
+			c.println("Client closing.");
 			System.exit(0);
 		}
 		c.println(usage());

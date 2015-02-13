@@ -1,5 +1,8 @@
 package cmdline;
 
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.net.Socket;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -18,7 +21,21 @@ public class ConnectCommand implements Command
 		{
 			if(isValidIP(cmd[1]))
 			{
-				c.println("Attempting to connect to " + cmd[1] + " (not really!)");
+				c.println("Attempting to connect to " + cmd[1] + ":2121");
+				try
+				{
+					Socket temp = new Socket(cmd[1], 2121);
+					c.println("Connection successful.");
+					DataInputStream in = new DataInputStream(temp.getInputStream());
+					System.out.println(in.readUTF());
+					temp.close();
+					System.exit(0);
+				}
+				catch (IOException ex)
+				{
+					ex.printStackTrace();
+					c.println("Connection failed.");
+				}
 			}
 			else
 			{
