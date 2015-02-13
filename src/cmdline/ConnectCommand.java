@@ -3,17 +3,13 @@ package cmdline;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.Socket;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import user.Client;
+import static tools.Validate.isValidIP;
 
 public class ConnectCommand implements Command
 {
 	String name;
-	private final Pattern pattern = Pattern.compile(
-			"^([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\." +
-			"([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.([01]?\\d\\d?|2[0-4]\\d|25[0-5])$");
 	
 	public void handle(Client c, String[] cmd)
 	{
@@ -27,9 +23,9 @@ public class ConnectCommand implements Command
 					Socket temp = new Socket(cmd[1], 2121);
 					c.println("Connection successful.");
 					DataInputStream in = new DataInputStream(temp.getInputStream());
-					System.out.println(in.readUTF());
+					int newPort = in.readInt();
 					temp.close();
-					System.exit(0);
+					c.connectTo(cmd[1], newPort);
 				}
 				catch (IOException ex)
 				{
@@ -54,12 +50,5 @@ public class ConnectCommand implements Command
 	public void setName(String name)
 	{
 		this.name = name;
-	}
-	
-	//http://www.mkyong.com/regular-expressions/how-to-validate-ip-address-with-regular-expression/
-	private boolean isValidIP(String ip)
-	{
-		Matcher matcher = pattern.matcher(ip);
-		return matcher.matches();
 	}
 }

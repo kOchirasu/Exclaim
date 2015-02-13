@@ -22,10 +22,20 @@ public class Server implements Runnable
 		{
 			try
 			{
+				//Wait for some connection
+				System.out.println("Server waiting for connection...");
 				cCon = ss.accept();
 				System.out.println("S> Server accepted connection from " + cCon.getRemoteSocketAddress());
 				DataOutputStream das = new DataOutputStream(cCon.getOutputStream());
-				das.writeUTF(cCon.getLocalSocketAddress().toString());
+				ss = new ServerSocket(0);
+				das.writeInt(ss.getLocalPort());
+				cCon.close();
+				
+				//Redirect the connection
+				cCon = ss.accept();
+				System.out.println("Chat connection established to " + cCon.getRemoteSocketAddress());
+				das = new DataOutputStream(cCon.getOutputStream());
+				das.writeUTF("My first message sent :3");
 				break;
 			}
 			catch (IOException ex)

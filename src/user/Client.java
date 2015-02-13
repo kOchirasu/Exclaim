@@ -2,12 +2,18 @@ package user;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.HashMap;
 
-import cmdline.*;
+import packetLib.Connection;
+import cmdline.ConnectCommand;
+import cmdline.ExitCommand;
+import cmdline.HelpCommand;
+import cmdline.Parser;
 
 public class Client
 {	
 	public Parser p;
+	public HashMap<String, Connection> cList;
 	
 	public Client()
 	{
@@ -27,6 +33,14 @@ public class Client
 			command = br.readLine();
 			p.handle(this, command);
 		}
+	}
+	
+	public void connectTo(String ip, int port)
+	{
+		Connection conn = new Connection(ip, port);
+		if(conn.connect())
+			cList.put(conn.toString(), conn);
+		System.out.println(conn.recv());
 	}
 	
 	public void print(String s)
