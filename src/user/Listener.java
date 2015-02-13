@@ -5,12 +5,15 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-public class Server implements Runnable
+public class Listener implements Runnable
 {
-	ServerSocket ss;
-	public Server() throws IOException
+	Client c;
+	ServerSocket listenSock;
+	
+	public Listener(Client c) throws IOException
 	{
-		ss = new ServerSocket(2121);
+		listenSock = new ServerSocket(2121);
+		this.c = c;
 		//ss.setSoTimeout(10000);
 	}
 	
@@ -24,18 +27,19 @@ public class Server implements Runnable
 			{
 				//Wait for some connection
 				System.out.println("Server waiting for connection...");
-				cCon = ss.accept();
+				cCon = listenSock.accept();
 				System.out.println("S> Server accepted connection from " + cCon.getRemoteSocketAddress());
-				DataOutputStream das = new DataOutputStream(cCon.getOutputStream());
-				ss = new ServerSocket(0);
-				das.writeInt(ss.getLocalPort());
+				DataOutputStream out = new DataOutputStream(cCon.getOutputStream());
+				ServerSocket ss = new ServerSocket(0); //might want to make new reference to preserve initial one
+				out.writeInt(ss.getLocalPort());
 				cCon.close();
 				
-				//Redirect the connection
-				cCon = ss.accept();
+				c.connectTo(ss);
+				//Redirect the connection (This connection should be moved into Client cList)
+				/*cCon = ss.accept();
 				System.out.println("Chat connection established to " + cCon.getRemoteSocketAddress());
-				das = new DataOutputStream(cCon.getOutputStream());
-				das.writeUTF("My first message sent :3");
+				out = new DataOutputStream(cCon.getOutputStream());
+				out.writeUTF("My first message sent :3");*/
 			}
 			catch (IOException ex)
 			{

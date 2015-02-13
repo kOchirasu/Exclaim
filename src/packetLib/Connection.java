@@ -3,6 +3,7 @@ package packetLib;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.net.ServerSocket;
 import java.net.Socket;
 
 import static tools.Validate.isValidIP;
@@ -11,25 +12,24 @@ public class Connection
 {
 	private String ip;
 	private int port;
-	private boolean connected = false;
 	private Socket s;
 	private DataOutputStream out;
 	private DataInputStream in;
+	public boolean connected = false;
 	
-	public Connection(String ip, int port) //might want to validate ip and port?
-	{
-		setIP(ip);
-		setPort(port);
-	}
-		
-	public boolean connect()
+	/* Creates a new connection (outgoing request)
+	 * 
+	 */
+	
+	public Connection(String ip, int port)
 	{
 		try
 		{
+			setIP(ip);
+			setPort(port);
 			s = new Socket(ip, port);
 			System.out.println("Connection established with " + s.getRemoteSocketAddress());
-			in = new DataInputStream(s.getInputStream());
-			out = new DataOutputStream(s.getOutputStream());
+			initStream();
 			connected = true;
 		}
 		catch (Exception ex)
@@ -38,7 +38,35 @@ public class Connection
 			//ex.printStackTrace();
 			connected = false;
 		}
-		return connected;
+	}
+	
+	/* Creates a new connection (incoming request)
+	 * 
+	 */
+	public Connection(ServerSocket ss)
+	{
+		try
+		{
+			s = ss.accept();
+			System.out.println("Connection established with " + s.getRemoteSocketAddress());
+			initStream();
+			connected = true;
+		}
+		catch (Exception ex)
+		{
+			System.out.println("Connection failed.");
+			//ex.printStackTrace();
+			connected = false;
+		}
+	}
+	
+	private void initStream() throws IOException
+	{
+		if(s != null)
+		{
+			in = new DataInputStream(s.getInputStream());
+			out = new DataOutputStream(s.getOutputStream());
+		}
 	}
 	
 	public String recv()
