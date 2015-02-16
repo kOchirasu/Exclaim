@@ -7,7 +7,7 @@ import java.io.IOException;
 
 public class PacketWriter extends ByteArrayOutputStream
 {
-	public PacketWriter(int header) throws IOException
+	public PacketWriter(int header)
 	{
 		writeByte(header);
 	}
@@ -55,5 +55,9 @@ public class PacketWriter extends ByteArrayOutputStream
 	
 	public String toString() {
 		return byteArrayToHexString(toByteArray());
+	}
+	
+	public int length() {
+		return count;
 	}
 }

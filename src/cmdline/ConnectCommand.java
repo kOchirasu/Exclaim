@@ -1,11 +1,7 @@
 package cmdline;
 
-import java.io.DataInputStream;
-import java.io.IOException;
-import java.net.Socket;
-
-import user.Client;
 import static tools.Validate.isValidIP;
+import user.Client;
 
 public class ConnectCommand implements Command
 {
@@ -18,20 +14,7 @@ public class ConnectCommand implements Command
 			if(isValidIP(cmd[1]))
 			{
 				c.println("Attempting to connect to " + cmd[1] + ":2121");
-				try
-				{
-					Socket temp = new Socket(cmd[1], 2121);
-					c.println("Connection successful.");
-					DataInputStream in = new DataInputStream(temp.getInputStream());
-					int newPort = in.readInt();
-					temp.close();
-					c.connectTo(cmd[1], newPort);
-				}
-				catch (IOException ex)
-				{
-					ex.printStackTrace();
-					c.println("Connection failed.");
-				}
+				c.connectTo(cmd[1], 2121);
 			}
 			else
 			{

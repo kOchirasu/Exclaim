@@ -30,7 +30,7 @@ public class Parser
 	
 	public void handle(Client c, String cmd)
 	{
-		if(cmd.charAt(0) == '/')
+		if(cmd.length() > 0 && cmd.charAt(0) == '/')
 		{
 			cmd = cmd.substring(1); //remove '/'
 			String[] cmdArr = cmd.split(" +");

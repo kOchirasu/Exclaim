@@ -1,92 +1,114 @@
 package packetLib;
 
+import static tools.Validate.isValidIP;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-import static tools.Validate.isValidIP;
+import javax.crypto.Cipher;
 
-public class Connection
+import user.Client;
+
+public class Connection implements Runnable
 {
 	private String ip;
 	private int port;
-	private Socket s;
-	private DataOutputStream out;
 	private DataInputStream in;
-	public boolean connected = false;
+	private DataOutputStream out;
+	
+	private Client c;
+	private Socket sock;
+	private ServerSocket ss;
+	private Cipher ciph;
+	
+	private boolean request;
 	
 	/* Creates a new connection (outgoing request)
 	 * 
 	 */
-	
-	public Connection(String ip, int port)
+	public Connection(Client c, String ip, int port)
 	{
-		try
-		{
-			setIP(ip);
-			setPort(port);
-			s = new Socket(ip, port);
-			System.out.println("Connection established with " + s.getRemoteSocketAddress());
-			initStream();
-			connected = true;
-		}
-		catch (Exception ex)
-		{
-			System.out.println("Connection failed.");
-			//ex.printStackTrace();
-			connected = false;
-		}
+		this.c = c;
+		setIP(ip);
+		setPort(port);
+		request = true;
 	}
 	
 	/* Creates a new connection (incoming request)
 	 * 
 	 */
-	public Connection(ServerSocket ss)
+	public Connection(Client c, ServerSocket ss)
 	{
-		try
-		{
-			s = ss.accept();
-			System.out.println("Connection established with " + s.getRemoteSocketAddress());
-			initStream();
-			connected = true;
-		}
-		catch (Exception ex)
-		{
-			System.out.println("Connection failed.");
-			//ex.printStackTrace();
-			connected = false;
-		}
+		this.c = c;
+		this.ss = ss;
+		request = false;
 	}
 	
-	private void initStream() throws IOException
+	public void init() throws IOException
 	{
-		if(s != null)
+		if(request)
+			sock = new Socket(ip, port);
+		else
 		{
-			in = new DataInputStream(s.getInputStream());
-			out = new DataOutputStream(s.getOutputStream());
+			sock = ss.accept();
+			setIP(sock.getInetAddress().toString().substring(1));
+			setPort(sock.getPort());
 		}
+		System.out.println("Connection established with " + sock.getRemoteSocketAddress());
+		
+		//Initialize Streams
+		in = new DataInputStream(sock.getInputStream());
+		out = new DataOutputStream(sock.getOutputStream());
+		
+		Thread recvThread = new Thread(this);
+		recvThread.start();
 	}
 	
-	public String recv()
+	//begin receiving packets
+	public void run()
 	{
-		try
+		while(true)
 		{
-			return in.readUTF();
+			try
+			{
+				int length = in.readInt();
+				byte[] recvP = new byte[length];
+				in.read(recvP);
+				c.OnPacket(new PacketReader(recvP));
+			}
+			catch (IOException ex)
+			{
+				ex.printStackTrace();
+			}
 		}
-		catch (IOException ex)
-		{
-			ex.printStackTrace();
-		}
-		return null;
 	}
+	/*KeyGenerator keygen = KeyGenerator.getInstance("AES");
+	keygen.init(128);
+	SecretKey key = keygen.generateKey();
 	
-	public void send(String packet)
+	ciph = Cipher.getInstance("AES/CBC/PKCS5Padding");
+	ciph.init(Cipher.ENCRYPT_MODE, key);
+	
+	byte[] iv = ciph.getIV();*/
+	//System.out.println(Arrays.toString(iv));
+	//IvParameterSpec ivSpec = new IvParameterSpec(iv);
+	
+	public void send(PacketWriter p)
 	{
+		if(!sock.isConnected())
+			throw new IllegalStateException("Connection has not been established");
+		//if(!encrypted)
+		byte[] packet = p.toByteArray();
+		if(packet.length < 1)
+			throw new IllegalArgumentException("Invalid packet length " + packet.length);
+		
 		try
 		{
-			out.writeUTF(packet);
+			out.writeInt(p.length());
+			out.write(p.toByteArray());
 		}
 		catch (IOException ex)
 		{
@@ -96,20 +118,13 @@ public class Connection
 	
 	public void disconnect()
 	{
-		try
-		{
-			s.close();
-			connected = false;
+		try {
+			sock.close();
+			c.OnDisconnected(toString());
 		}
-		catch(Exception ex)
-		{
+		catch(Exception ex) {
 			ex.printStackTrace();
 		}
-	}
-	
-	public void reconnect(String ip, int port)
-	{
-		
 	}
 	
 	private void setIP(String ip)
@@ -131,5 +146,10 @@ public class Connection
 	public String toString()
 	{
 		return ip + ":" + port;
+	}
+	
+	public boolean isConnected()
+	{
+		return sock.isConnected();
 	}
 }
