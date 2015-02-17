@@ -1,6 +1,6 @@
 package packetLib;
 
-import static tools.HexEncoding.*;
+import static tools.HexEncoding.byteArrayToHexString;
 
 import java.io.ByteArrayInputStream;
 
@@ -46,5 +46,5 @@ public class PacketReader extends ByteArrayInputStream
 		return b;
 	}
 	
-	//Add toHexString/toByteArray IF possible
+	//Add toHexString/toByteArray using MARK
 }

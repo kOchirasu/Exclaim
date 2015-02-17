@@ -2,9 +2,6 @@ package user;
 
 import java.io.IOException;
 
-import packetLib.PacketReader;
-import packetLib.PacketWriter;
-
 public class Program
 {
 	public static void main(String[] args) throws IOException
@@ -13,7 +10,7 @@ public class Program
 		pw.writeShort(323);
 		pw.writeInt(-123);
 		pw.writeLong(992319323123L);
-		pw.writeString("heÿ%");
+		pw.writeString("hey?");
 		pw.writeHexString("AB CD EFFFF");
 		System.out.println(pw);
 		PacketReader pr = new PacketReader(pw.toByteArray());

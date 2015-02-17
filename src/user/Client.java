@@ -7,11 +7,11 @@ import java.util.HashMap;
 
 import packetLib.Connection;
 import packetLib.PacketReader;
-import packetLib.PacketWriter;
 import cmdline.ConnectCommand;
 import cmdline.ExitCommand;
 import cmdline.HelpCommand;
 import cmdline.ListCommand;
+import cmdline.MessageCommand;
 import cmdline.Parser;
 
 public class Client
@@ -57,7 +57,7 @@ public class Client
 			conn.init();
 			cList.put(conn.toString(), conn);
 		}
-		catch(IOException ex)
+		catch(Exception ex)
 		{
 			System.out.println("Connection failed.");
 			ex.printStackTrace();
@@ -75,7 +75,7 @@ public class Client
 		switch(pr.readByte())
 		{
 			case 1:
-				System.out.println(pr.readString());
+				System.out.println("Got a message: " + pr.readString());
 				break;
 			default:
 				System.out.println("Invalid Packet Header");
@@ -88,6 +88,7 @@ public class Client
 		p.add("help,?", new HelpCommand());
 		p.add("connect", new ConnectCommand());
 		p.add("list", new ListCommand());
+		p.add("message,msg", new MessageCommand());
 	}
 	public void print(String s)
 	{

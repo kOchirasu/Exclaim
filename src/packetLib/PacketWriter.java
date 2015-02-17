@@ -1,9 +1,9 @@
 package packetLib;
 
-import static tools.HexEncoding.*;
+import static tools.HexEncoding.byteArrayToHexString;
+import static tools.HexEncoding.hexStringToByteArray;
 
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 
 public class PacketWriter extends ByteArrayOutputStream
 {
