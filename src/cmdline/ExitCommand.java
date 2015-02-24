@@ -18,7 +18,7 @@ public class ExitCommand implements Command
             PacketWriter pw = new PacketWriter(200);
             for (String s : c.cList.keySet())
                 c.cList.get(s).sendPacket(pw);
-            //System.exit(0);
+            System.exit(0);
         }
         c.println(usage());
     }

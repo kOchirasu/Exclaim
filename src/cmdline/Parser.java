@@ -45,7 +45,7 @@ public class Parser
         else
         {
             c.println("Chat >> " + cmd);
-            Program.prog.writeChat("MYNAME", cmd);
+            Program.chatRoom.writeChat("MYNAME", cmd);
         }
 
     }

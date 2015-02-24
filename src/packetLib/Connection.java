@@ -19,7 +19,7 @@ public class Connection implements Runnable
 {
     private final String AES_KEY = "Ulng9bhk9uYrSgps";
     private String name, ip;
-    private int port, readFail = 0;
+    private int port;
     private DataInputStream in;
     private DataOutputStream out;
     private Client c;
@@ -135,18 +135,8 @@ public class Connection implements Runnable
             }
             catch (Exception ex)
             {
-                //ex.printStackTrace();
-                System.out.println("Connection failure");
-                try
-                {
-                    Thread.sleep(10000);
-                } //Prevent fail packet reading
-                catch (InterruptedException ex2)
-                {
-                    Thread.currentThread().interrupt();
-                }
-                if (++readFail > 10) //connection is probably dead
-                    break;
+                disconnect();
+                break;
             }
         }
     }
@@ -173,7 +163,7 @@ public class Connection implements Runnable
         }
     }
 
-    public void disconnect()
+    private void disconnect()
     {
         try
         {

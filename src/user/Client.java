@@ -56,7 +56,7 @@ public class Client
     {
         Connection conn = new Connection(this, ss);
         connectTo(conn);
-        Program.prog.writeAlert(conn + " has connected.");
+        Program.chatRoom.writeAlert(conn + " has connected.");
     }
 
     private void connectTo(Connection conn)
@@ -70,12 +70,12 @@ public class Client
             {
                 connName += (char) (Math.random() * 255);
                 cList.put(connName, conn);
-                Program.prog.addContact(connName);
+                Program.chatRoom.addContact(connName);
             }
             else
             {
                 cList.put(connName, conn);
-                Program.prog.addContact(connName);
+                Program.chatRoom.addContact(connName);
             }
         }
         catch (Exception ex)
@@ -87,8 +87,10 @@ public class Client
 
     public void OnDisconnected(String ipPort)
     {
+        Program.chatRoom.writeAlert(ipPort + " has disconnected.");
         if (cList.remove(ipPort) == null)
             throw new IllegalStateException("Not connected to " + ipPort);
+        Program.chatRoom.removeContact(ipPort);
     }
 
     public void OnPacket(Connection conn, PacketReader pr)
@@ -99,12 +101,12 @@ public class Client
             case 1:
                 String msg = pr.readString();
                 System.out.println("Got a message: " + msg);
-                Program.prog.writeChat(conn.toString(), msg);
+                Program.chatRoom.writeChat(conn.toString(), msg);
                 break;
             case -56: //200
-                Program.prog.writeAlert(conn + " has disconnected.");
+                Program.chatRoom.writeAlert(conn + " has disconnected.");
                 cList.remove(conn.toString());
-                Program.prog.removeContact(conn.toString());
+                Program.chatRoom.removeContact(conn.toString());
                 break;
             default:
                 System.out.println("Invalid Packet Header: " + header);
