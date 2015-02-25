@@ -3,6 +3,7 @@ package cmdline;
 import packetLib.Connection;
 import packetLib.PacketWriter;
 import user.Client;
+import user.Header;
 
 public class MessageCommand implements Command
 {
@@ -16,7 +17,7 @@ public class MessageCommand implements Command
             Connection dest = c.cList.get(cmd[1]);
             if (dest != null)
             {
-                PacketWriter pw = new PacketWriter(1);
+                PacketWriter pw = new PacketWriter(Header.CHAT);
                 pw.writeString(cmd[2]);
                 dest.sendPacket(pw);
             }

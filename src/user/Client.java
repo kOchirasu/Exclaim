@@ -3,15 +3,18 @@ package user;
 import cmdline.*;
 import packetLib.Connection;
 import packetLib.PacketReader;
+import packetLib.PacketWriter;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
+import java.net.URL;
 import java.util.HashMap;
 
 public class Client
 {
+    public String myIP;
     public Parser p;
     public HashMap<String, Connection> cList;
 
@@ -25,12 +28,18 @@ public class Client
             Listener l = new Listener(this, 2121);
             Thread listenThread = new Thread(l);
             listenThread.start();
+
+            URL getIP = new URL("http://checkip.amazonaws.com");
+            BufferedReader br = new BufferedReader(new InputStreamReader(getIP.openStream()));
+            myIP = br.readLine(); //you get the IP as a String
         }
         catch (IOException ex)
         {
             System.out.println("Unable to bind port 2121");
             ex.printStackTrace();
         }
+
+        Program.chatRoom.writeAlert("My IP is: " + myIP);
     }
 
     public void run() throws IOException
@@ -45,7 +54,6 @@ public class Client
         }
     }
 
-    //Hello
     public void connectTo(String ip, int port)
     {
         Connection conn = new Connection(this, ip, port);
@@ -56,7 +64,13 @@ public class Client
     {
         Connection conn = new Connection(this, ss);
         connectTo(conn);
-        Program.chatRoom.writeAlert(conn + " has connected.");
+        //After listener accepts a connection, should forward all current peers
+        PacketWriter pw = new PacketWriter(Header.FORWARD);
+        pw.writeByte(cList.size()); //will be problem if > 127?
+        for(String s : cList.keySet())
+            pw.writeString(s);
+
+        conn.sendPacket(pw);
     }
 
     private void connectTo(Connection conn)
@@ -64,7 +78,7 @@ public class Client
         try
         {
             conn.init();
-            //TODO: MAKE A BETTER FIX
+            //TODO: MAKE A BETTER FIX (Maybe prevent this from being possible)
             String connName = conn.toString();
             if (cList.containsKey(connName))
             {
@@ -77,6 +91,7 @@ public class Client
                 cList.put(connName, conn);
                 Program.chatRoom.addContact(connName);
             }
+            Program.chatRoom.writeAlert(conn + " has connected.");
         }
         catch (Exception ex)
         {
@@ -98,12 +113,24 @@ public class Client
         byte header = pr.readByte();
         switch (header)
         {
-            case 1:
+            case Header.CHAT: //1
                 String msg = pr.readString();
                 System.out.println("Got a message: " + msg);
                 Program.chatRoom.writeChat(conn.toString(), msg);
                 break;
-            case -56: //200
+            case Header.FORWARD: //10
+                for(int i = pr.readByte();i > 0; i--)
+                {
+                    System.out.print("Need to request connect to ");
+                    String addIP = pr.readString().split(":")[0];
+                    if(!addIP.equals(myIP)) //Problem when connecting to localhost (causes loop)
+                    {
+                        System.out.println(addIP);
+                        connectTo(addIP, 2121);
+                    }
+                }
+                break;
+            case Header.DISCONNECT: //200
                 Program.chatRoom.writeAlert(conn + " has disconnected.");
                 cList.remove(conn.toString());
                 Program.chatRoom.removeContact(conn.toString());

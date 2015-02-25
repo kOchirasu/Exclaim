@@ -1,13 +1,13 @@
 package user;
 
 import packetLib.PacketWriter;
+import tools.Validate;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.event.*;
+
+import static tools.Validate.isValidIP;
 
 public class ChatRoom extends JFrame
 {
@@ -17,13 +17,14 @@ public class ChatRoom extends JFrame
     private DefaultListModel contactModel;
     private JButton sendButton;
     private JTextArea chatBox;
-    private JButton joinButton;
-    private JFormattedTextField joinIPInput;
+    private JButton joinLeaveButton;
+    private JTextField joinIPInput;
 
     public ChatRoom()
     {
         super("Exclaim Chat Room (Work in Progress)");
         chatPanel.setBorder(new EmptyBorder(7, 7, 7, 7));
+
         setContentPane(chatPanel);
         setSize(600, 450);
 
@@ -33,6 +34,9 @@ public class ChatRoom extends JFrame
         contactList.addMouseListener(new ContactMouseListener());
 
         sendButton.addActionListener(new SendChatListener());
+        joinLeaveButton.addActionListener(new JoinLeaveListener());
+
+        joinIPInput.addFocusListener(new JoinIPListener());
 
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
@@ -80,12 +84,44 @@ public class ChatRoom extends JFrame
         prog.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         prog.setVisible(true);
         */
+
+    class JoinIPListener implements FocusListener
+    {
+        @Override
+        public void focusGained(FocusEvent e) { /* do nothing? */ }
+
+        @Override
+        public void focusLost(FocusEvent e)
+        {
+            if(!Validate.isValidIP(joinIPInput.getText()))
+                joinIPInput.setText("");
+        }
+    }
+
+    class JoinLeaveListener implements ActionListener
+    {
+        @Override
+        public void actionPerformed(ActionEvent e)
+        {
+            String ip = joinIPInput.getText();
+            if (isValidIP(ip))
+            {
+                System.out.println("Attempting to connect to " + ip + ":2121");
+                Program.c.connectTo(ip, 2121);
+            }
+            else
+            {
+                System.out.println(ip + " is not a valid IP address.");
+            }
+        }
+    }
+
     class SendChatListener implements ActionListener
     {
         @Override
         public void actionPerformed(ActionEvent e)
         {
-            PacketWriter pw = new PacketWriter(1);
+            PacketWriter pw = new PacketWriter(Header.CHAT);
             pw.writeString(chatInput.getText());
             for (String s : Program.c.cList.keySet())
                 Program.c.cList.get(s).sendPacket(pw);

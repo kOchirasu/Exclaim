@@ -2,6 +2,7 @@ package cmdline;
 
 import packetLib.PacketWriter;
 import user.Client;
+import user.Header;
 
 public class ExitCommand implements Command
 {
@@ -15,7 +16,7 @@ public class ExitCommand implements Command
         if (cmd.length == 1)
         {
             c.println("Client closing.");
-            PacketWriter pw = new PacketWriter(200);
+            PacketWriter pw = new PacketWriter(Header.DISCONNECT);
             for (String s : c.cList.keySet())
                 c.cList.get(s).sendPacket(pw);
             System.exit(0);

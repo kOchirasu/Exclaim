@@ -11,7 +11,7 @@
       <component id="d0120" class="javax.swing.JList" binding="blackList">
         <constraints>
           <grid row="1" column="2" row-span="1" col-span="1" vsize-policy="6" hsize-policy="2" anchor="0" fill="3" indent="0" use-parent-layout="false">
-            <preferred-size width="150" height="25"/>
+            <preferred-size width="110" height="25"/>
           </grid>
         </constraints>
         <properties/>
