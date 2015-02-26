@@ -135,7 +135,8 @@ public class Connection implements Runnable
             }
             catch (Exception ex)
             {
-                disconnect();
+                //try { sock.close(); } catch (IOException iex) { iex.printStackTrace(); }
+                //c.OnDisconnected(toString());
                 break;
             }
         }
@@ -163,7 +164,7 @@ public class Connection implements Runnable
         }
     }
 
-    private void disconnect()
+    public void disconnect()
     {
         try
         {

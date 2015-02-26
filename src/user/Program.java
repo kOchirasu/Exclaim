@@ -11,7 +11,7 @@ public class Program
     public static void main(String[] args) throws IOException
     {
         chatRoom = new ChatRoom();
-        //mainProg = new MainForm();
+        mainProg = new MainForm();
 
         c = new Client();
         c.run();

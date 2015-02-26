@@ -3,7 +3,6 @@ package user;
 import cmdline.*;
 import packetLib.Connection;
 import packetLib.PacketReader;
-import packetLib.PacketWriter;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -17,10 +16,12 @@ public class Client
     public String myIP;
     public Parser p;
     public HashMap<String, Connection> cList;
+    public HashMap<String, Connection> jList;
 
     public Client()
     {
         cList = new HashMap<>();
+        jList = new HashMap<>();
         p = new Parser();
         initParser();
         try
@@ -32,14 +33,13 @@ public class Client
             URL getIP = new URL("http://checkip.amazonaws.com");
             BufferedReader br = new BufferedReader(new InputStreamReader(getIP.openStream()));
             myIP = br.readLine(); //you get the IP as a String
+            Program.chatRoom.writeAlert("My IP is: " + myIP);
         }
         catch (IOException ex)
         {
             System.out.println("Unable to bind port 2121");
             ex.printStackTrace();
         }
-
-        Program.chatRoom.writeAlert("My IP is: " + myIP);
     }
 
     public void run() throws IOException
@@ -57,55 +57,90 @@ public class Client
     public void connectTo(String ip, int port)
     {
         Connection conn = new Connection(this, ip, port);
-        connectTo(conn);
-    }
-
-    public void connectTo(ServerSocket ss)
-    {
-        Connection conn = new Connection(this, ss);
-        connectTo(conn);
-        //After listener accepts a connection, should forward all current peers
-        PacketWriter pw = new PacketWriter(Header.FORWARD);
-        pw.writeByte(cList.size()); //will be problem if > 127?
-        for(String s : cList.keySet())
-            pw.writeString(s);
-
-        conn.sendPacket(pw);
-    }
-
-    private void connectTo(Connection conn)
-    {
         try
         {
             conn.init();
-            //TODO: MAKE A BETTER FIX (Maybe prevent this from being possible)
-            String connName = conn.toString();
-            if (cList.containsKey(connName))
-            {
-                connName += (char) (Math.random() * 255);
-                cList.put(connName, conn);
-                Program.chatRoom.addContact(connName);
-            }
-            else
-            {
-                cList.put(connName, conn);
-                Program.chatRoom.addContact(connName);
-            }
-            Program.chatRoom.writeAlert(conn + " has connected.");
         }
         catch (Exception ex)
         {
             System.out.println("Connection failed.");
             ex.printStackTrace();
         }
+
+        addConnection(conn);
+    }
+
+    public void connectTo(ServerSocket ss)
+    {
+        Connection conn = new Connection(this, ss);
+        try
+        {
+            conn.init();
+        }
+        catch (Exception ex)
+        {
+            System.out.println("Connection failed.");
+            ex.printStackTrace();
+        }
+        jList.put(conn.toString(), conn);
+        Program.mainProg.addRequest(conn.toString());
+    }
+
+    public void chatAccept(String ipPort)
+    {
+        Connection conn = jList.get(ipPort);
+        if(conn == null)
+            throw new IllegalStateException("Not connected to " + ipPort);
+        jList.remove(ipPort);
+        addConnection(conn);
+        //After listener accepts a connection, should forward all current peers
+        /*PacketWriter pw = new PacketWriter(Header.FORWARD);
+        pw.writeByte(cList.size()); //will be problem if > 127?
+        for(String s : cList.keySet())
+            pw.writeString(s);
+
+        conn.sendPacket(pw);*/
+    }
+
+    public void chatReject(String ipPort)
+    {
+        Connection conn = jList.get(ipPort);
+        if(conn == null)
+            throw new IllegalStateException("Not connected to " + ipPort);
+        jList.remove(ipPort);
+        conn.disconnect();
+    }
+
+    private void addConnection(Connection conn)
+    {
+        //TODO: MAKE A BETTER FIX (Maybe prevent this from being possible)
+        String connName = conn.toString();
+        if (cList.containsKey(connName))
+        {
+            connName += (char) (Math.random() * 255);
+            cList.put(connName, conn);
+            Program.chatRoom.addContact(connName);
+        }
+        else
+        {
+            cList.put(connName, conn);
+            Program.chatRoom.addContact(connName);
+        }
+        Program.chatRoom.writeAlert(conn + " has connected.");
     }
 
     public void OnDisconnected(String ipPort)
     {
-        Program.chatRoom.writeAlert(ipPort + " has disconnected.");
-        if (cList.remove(ipPort) == null)
-            throw new IllegalStateException("Not connected to " + ipPort);
-        Program.chatRoom.removeContact(ipPort);
+        if (cList.remove(ipPort) == null) //not illegal state if rejected
+        {
+            Program.chatRoom.writeAlert(ipPort + " has been rejected.");
+            //throw new IllegalStateException("Not connected to " + ipPort);
+        }
+        else
+        {
+            Program.chatRoom.writeAlert(ipPort + " has disconnected.");
+            Program.chatRoom.removeContact(ipPort);
+        }
     }
 
     public void OnPacket(Connection conn, PacketReader pr)
