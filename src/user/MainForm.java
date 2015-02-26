@@ -22,7 +22,7 @@ public class MainForm extends JFrame
         super("Exclaim Chat Client (Work in Progress)");
         mainPanel.setBorder(new EmptyBorder(7, 7, 7, 7));
         setContentPane(mainPanel);
-        setSize(500,300);
+        setSize(500, 300);
         setResizable(false);
 
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -41,24 +41,49 @@ public class MainForm extends JFrame
         setVisible(true);
     }
 
-    public void addBlack(String name) { blackModel.addElement(name); }
-    public void addWhite(String name) { whiteModel.addElement(name); }
-    public void addRequest(String name) { requestModel.addElement(name); }
+    public void addBlack(String name)
+    {
+        blackModel.addElement(name);
+    }
 
-    public void removeBlack(String name) { blackModel.removeElement(name); }
-    public void removeWhite(String name) { whiteModel.removeElement(name); }
-    public void removeRequest(String name) { requestModel.removeElement(name); }
+    public void addWhite(String name)
+    {
+        whiteModel.addElement(name);
+    }
+
+    public void addRequest(String name)
+    {
+        requestModel.addElement(name);
+    }
+
+    public void removeBlack(String name)
+    {
+        blackModel.removeElement(name);
+    }
+
+    public void removeWhite(String name)
+    {
+        whiteModel.removeElement(name);
+    }
+
+    public void removeRequest(String name)
+    {
+        requestModel.removeElement(name);
+    }
 
     class BlackMouseListener extends MouseAdapter
     {
         BlackRightMenu blackMenu;
 
-        public BlackMouseListener() { blackMenu = new BlackRightMenu(); }
+        public BlackMouseListener()
+        {
+            blackMenu = new BlackRightMenu();
+        }
 
         @Override
         public void mouseReleased(MouseEvent e)
         {
-            if(e.isPopupTrigger())
+            if (e.isPopupTrigger())
             {
                 blackMenu.removeItem.setEnabled(requestList.getSelectedIndex() >= 0);
                 blackMenu.show(e.getComponent(), e.getX(), e.getY());
@@ -93,12 +118,15 @@ public class MainForm extends JFrame
     {
         WhiteRightMenu whiteMenu;
 
-        public WhiteMouseListener() { whiteMenu = new WhiteRightMenu(); }
+        public WhiteMouseListener()
+        {
+            whiteMenu = new WhiteRightMenu();
+        }
 
         @Override
         public void mouseReleased(MouseEvent e)
         {
-            if(e.isPopupTrigger())
+            if (e.isPopupTrigger())
             {
                 whiteMenu.removeItem.setEnabled(requestList.getSelectedIndex() >= 0);
                 whiteMenu.show(e.getComponent(), e.getX(), e.getY());
@@ -141,7 +169,7 @@ public class MainForm extends JFrame
         @Override
         public void mouseReleased(MouseEvent e)
         {
-            if(e.isPopupTrigger())
+            if (e.isPopupTrigger())
             {
                 requestMenu.acceptItem.setEnabled(requestList.getSelectedIndex() >= 0);
                 requestMenu.rejectItem.setEnabled(requestList.getSelectedIndex() >= 0);

@@ -62,38 +62,17 @@ public class ChatRoom extends JFrame
     {
         chatBox.append(message + "\n");
     }
-        /*PacketWriter pw = new PacketWriter(12);
-        pw.writeShort(323);
-        pw.writeInt(-123);
-        pw.writeLong(992319323123L);
-        pw.writeString("hey?");
-        pw.writeHexString("AB CD EFFFF");
-        System.out.println(pw);
-        PacketReader pr = new PacketReader(pw.toByteArray());
-        System.out.println(pr.readByte());
-        System.out.println(pr.readShort());
-        System.out.println(pr.readInt());
-        System.out.println(pr.readLong());
-        System.out.println(pr.readString());
-        System.out.println(pr.readHexString(5));
-        pr.close();
-        System.exit(0);*/
-
-        /*JFrame prog = new JFrame();
-        prog.setSize(300, 400);
-        prog.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        prog.setVisible(true);
-        */
 
     class JoinIPListener implements FocusListener
     {
         @Override
-        public void focusGained(FocusEvent e) { /* do nothing? */ }
+        public void focusGained(FocusEvent e)
+        { /* do nothing? */ }
 
         @Override
         public void focusLost(FocusEvent e)
         {
-            if(!Validate.isValidIP(joinIPInput.getText()))
+            if (!Validate.isValidIP(joinIPInput.getText()))
                 joinIPInput.setText("");
         }
     }
@@ -142,7 +121,7 @@ public class ChatRoom extends JFrame
         @Override
         public void mouseReleased(MouseEvent e)
         {
-            if(e.isPopupTrigger())
+            if (e.isPopupTrigger())
             {
                 contactMenu.removeItem.setEnabled(contactList.getSelectedIndex() >= 0);
                 contactMenu.show(e.getComponent(), e.getX(), e.getY());

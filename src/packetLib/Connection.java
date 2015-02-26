@@ -8,6 +8,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.security.GeneralSecurityException;
@@ -53,7 +54,8 @@ public class Connection implements Runnable
     {
         if (request)
         {
-            sock = new Socket(ip, port);
+            sock = new Socket();
+            sock.connect(new InetSocketAddress(ip, port), 2000);
         }
         else
         {
@@ -67,10 +69,10 @@ public class Connection implements Runnable
         in = new DataInputStream(sock.getInputStream());
         out = new DataOutputStream(sock.getOutputStream());
 
-        //Handshake
+        //Handshakes
         if (request)
         {
-            //System.out.println("BEGIN HANDSHAKE CLIENT!");
+            /* Begin Client Handshake */
             int length = in.readInt();
             byte[] recvP = new byte[length];
             in.read(recvP);
@@ -85,13 +87,10 @@ public class Connection implements Runnable
             eCiph = Cipher.getInstance("AES/CBC/PKCS5Padding");
             eCiph.init(Cipher.ENCRYPT_MODE, key, new IvParameterSpec(pr.readBytes(16)));
             encrypted = true;
-
-            pr.close();
-            //System.out.println("HANDSHAKE COMPLETED CLIENT!");
         }
         else
         {
-            //System.out.println("BEGIN HANDSHAKE SERVER!");
+            /* Begin Server Handshake */
             setIP(sock.getInetAddress().toString().substring(1));
             setPort(sock.getPort());
             //Handshake
@@ -114,13 +113,10 @@ public class Connection implements Runnable
             //Send IV over to client
             out.writeInt(pw.length());
             out.write(pw.toByteArray());
-            pw.close();
-            //System.out.println("HANDSHAKE COMPLETED SERVER!");
         }
-        new Thread(this).start();
+        new Thread(this).start(); //Start thread for receiving packets
     }
 
-    //begin receiving packets
     public void run()
     {
         while (true)
@@ -135,8 +131,6 @@ public class Connection implements Runnable
             }
             catch (Exception ex)
             {
-                //try { sock.close(); } catch (IOException iex) { iex.printStackTrace(); }
-                //c.OnDisconnected(toString());
                 break;
             }
         }
@@ -148,6 +142,7 @@ public class Connection implements Runnable
             throw new IllegalStateException("Connection has not been established");
         if (!encrypted)
             throw new IllegalStateException("Handshake has not been received");
+
         byte[] packet = p.toByteArray();
         if (packet.length < 1)
             throw new IllegalArgumentException("Invalid packet length " + packet.length);
@@ -169,7 +164,7 @@ public class Connection implements Runnable
         try
         {
             sock.close();
-            c.OnDisconnected(toString());
+            c.OnDisconnected(ip);
         }
         catch (Exception ex)
         {
@@ -191,6 +186,11 @@ public class Connection implements Runnable
             this.port = port;
         else
             throw new IllegalArgumentException(port + " is not a valid Port.");
+    }
+
+    public String getIP()
+    {
+        return ip;
     }
 
     public String toString()
