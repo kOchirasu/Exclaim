@@ -7,6 +7,7 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -129,8 +130,22 @@ public class Connection implements Runnable
 
                 c.OnPacket(this, new PacketReader(dCiph.doFinal(recvP)));
             }
-            catch (Exception ex)
+            catch (EOFException ex)
             {
+                System.out.println("EOFEXCEPTION");
+                disconnect();
+                break;
+            }
+            catch (IOException ex)
+            {
+                System.out.println("IOEXCEPTION");
+                disconnect();
+                break;
+            }
+            catch(Exception ex)
+            {
+                System.out.println("etcEXCEPTION");
+                disconnect();
                 break;
             }
         }
@@ -152,6 +167,7 @@ public class Connection implements Runnable
             byte[] encryptedSend = eCiph.doFinal(p.toByteArray());
             out.writeInt(encryptedSend.length);
             out.write(encryptedSend);
+            //System.out.println("[SEND] " + p); //print packet
         }
         catch (Exception ex)
         {

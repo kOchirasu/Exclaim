@@ -17,9 +17,17 @@ public class Client
 {
     public String myIP;
     public Parser p;
-    public HashMap<String, Connection> cList; //Connection List: map IP to connection
-    public HashMap<String, Connection> jList; //Join List: map IP to connection
-    public HashMap<String, Connection> wList; //Wait List: map IP to connection
+    //cList: Connection List - Maps IP to Connection
+    //List of active connections which have been accepted
+    public HashMap<String, Connection> cList;
+    //jList: Join List - Maps IP to Connection
+    //List of connections requesting to join chat
+    public HashMap<String, Connection> jList;
+    //wList: Wait List - Maps IP to Connection
+    //List of connections waiting to join
+    public HashMap<String, Connection> wList;
+    //aList: Allow List - IP
+    //List of IPs that will be white listed for 1 connect
     public ArrayList<String> aList; //allow list
 
     public Client()
@@ -29,14 +37,17 @@ public class Client
         wList = new HashMap<>();
         aList = new ArrayList<>();
 
+        //Initialize command line parser.  Not needed for GUI version
         p = new Parser();
         initParser();
+
+        //Start up listener
+        Listener l = new Listener(this, 2121);
+        Thread listenThread = new Thread(l);
+        listenThread.start();
+
         try
         {
-            Listener l = new Listener(this, 2121);
-            Thread listenThread = new Thread(l);
-            listenThread.start();
-
             URL getIP = new URL("http://checkip.amazonaws.com");
             BufferedReader br = new BufferedReader(new InputStreamReader(getIP.openStream()));
             myIP = br.readLine(); //you get the IP as a String
@@ -44,7 +55,7 @@ public class Client
         }
         catch (IOException ex)
         {
-            System.out.println("Unable to bind port 2121");
+            System.out.println("Unable to get IP");
             ex.printStackTrace();
         }
     }
@@ -68,7 +79,7 @@ public class Client
         {
             conn.init();
             //Don't actually add connection until it is accepted
-            wList.put(ip, conn);
+            wList.put(ip, conn); //Store IP in waitlist
             //addConnection(conn);
         }
         catch (Exception ex)
@@ -90,6 +101,12 @@ public class Client
             {
                 aList.remove(conn.getIP());
                 addConnection(conn);
+
+                //Respond with and accept message
+                PacketWriter pw = new PacketWriter(Header.ACTION);
+                pw.writeByte(1);
+                pw.writeString(myIP);
+                conn.sendPacket(pw);
             }
             else //Add connection to request list
             {
@@ -116,13 +133,15 @@ public class Client
         for(String s : cList.keySet())
             cList.get(s).sendPacket(pw);
 
+        //Respond with and accept message
         pw = new PacketWriter(Header.ACTION);
         pw.writeByte(1);
         pw.writeString(myIP);
         conn.sendPacket(pw);
 
-        //TODO:Dont remove this until you are finished forwarding?
-        jList.remove(ip); //Remove from joining list
+        //TODO: Don't remove this until you are finished forwarding?
+        if(cList.size() == 0)
+            jList.remove(ip); //Remove from joining list
         //Might want to delay a little before adding?
         addConnection(conn);
     }
@@ -133,6 +152,7 @@ public class Client
         if (conn == null)
             throw new IllegalStateException("Not connected to " + ip);
 
+        //Respond with and reject message
         PacketWriter pw = new PacketWriter(Header.ACTION);
         pw.writeByte(2);
         pw.writeString(myIP);
@@ -179,12 +199,13 @@ public class Client
 
     public void OnPacket(Connection conn, PacketReader pr)
     {
-        //System.out.println(pr.toHexString()); //print packet
+        //System.out.println("[RECV] " + pr.toHexString()); //print packet
         byte header = pr.readByte();
         switch (header)
         {
             case Header.CHAT: //1
                 String msg = pr.readString();
+                //TODO: lookup name instead of using ip:port as name
                 Program.chatRoom.writeChat(conn.toString(), msg);
                 break;
             case Header.ACTION:
@@ -194,12 +215,12 @@ public class Client
                 {
                     case 1: //accept
                         addConnection(actionC);
-                        System.out.println("Connection accepted");
+                        Program.chatRoom.writeAlert("Connection accepted");
                         wList.remove(actionC);
                         break;
                     case 2: //reject
                         wList.get(actionC).disconnect();
-                        System.out.println("Connection rejected");
+                        Program.chatRoom.writeAlert("Connection rejected");
                         wList.remove(actionC);
                         break;
                     default:
@@ -211,15 +232,19 @@ public class Client
                 aList.add(allowIP); //Add this ip to allow list
                 PacketWriter apw = new PacketWriter(Header.ALLOW_RSP);
                 apw.writeString(allowIP); //respond with allowed ip
-                apw.writeString(myIP); //respond with my IP
+                //apw.writeString(myIP); //respond with my IP aka conn.getIP()
                 conn.sendPacket(apw);
                 break;
-            case Header.ALLOW_RSP: //Forward allowed ip
+            case Header.ALLOW_RSP: //Forwarded allowed ip
                 String forwardIP = pr.readString(); //IP of peer that will accept new connection
-                String peerIP = pr.readString();
                 PacketWriter fpw = new PacketWriter(Header.FORWARD);
-                fpw.writeString(peerIP);
+                fpw.writeString(conn.getIP());
                 //need to send this packet to other connection...
+
+                //ERROR: FORWARDIP lookup returns nothing!!
+                System.out.println("Join List:");
+                for(String s : jList.keySet())
+                    System.out.println(s);
                 jList.get(forwardIP).sendPacket(fpw);
                 break;
             case Header.FORWARD:

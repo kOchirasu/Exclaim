@@ -8,10 +8,18 @@ public class Listener implements Runnable
     Client c;
     ServerSocket listenSock;
 
-    public Listener(Client c, int port) throws IOException
+    public Listener(Client c, int port)
     {
-        listenSock = new ServerSocket(port);
-        this.c = c;
+        try
+        {
+            listenSock = new ServerSocket(port);
+            this.c = c;
+        }
+        catch(IOException ex)
+        {
+            Program.chatRoom.writeAlert("Unable to start listener.  You will not receive connection requests.");
+            ex.printStackTrace();
+        }
     }
 
     public void run()

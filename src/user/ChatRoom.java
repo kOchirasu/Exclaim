@@ -55,7 +55,8 @@ public class ChatRoom extends JFrame
 
     public void writeChat(String name, String message)
     {
-        chatBox.append(name + ": " + message + "\n");
+        if(message.length() > 0)
+            chatBox.append(name + ": " + message + "\n");
     }
 
     public void writeAlert(String message)
