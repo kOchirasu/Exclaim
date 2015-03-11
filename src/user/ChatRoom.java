@@ -23,7 +23,6 @@ public class ChatRoom extends JFrame
     private JTextArea chatBox;
     private JButton joinLeaveButton;
     private JTextField joinIPInput;
-    private JButton setNameButton;
     private JTextField chatNameInput;
 
     public ChatRoom()
@@ -38,13 +37,17 @@ public class ChatRoom extends JFrame
         //Need for adding to list
         contactModel = new DefaultListModel();
         contactList.setModel(contactModel);
-        contactList.addMouseListener(new ContactMouseListener());
+        //contactList.addMouseListener(new ContactMouseListener());
 
         sendButton.addActionListener(new SendChatListener());
         joinLeaveButton.addActionListener(new JoinLeaveListener());
-        setNameButton.addActionListener(new SetNameListener());
 
         joinIPInput.addFocusListener(new JoinIPListener());
+        chatNameInput.addFocusListener(new ChatNameListener());
+
+        getRootPane().setDefaultButton(sendButton);
+
+        super.setName(chatNameInput.getText());
 
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
@@ -63,8 +66,15 @@ public class ChatRoom extends JFrame
 
     public void setName(String name)
     {
+        super.setName(name);
         chatNameInput.setText(name);
         writeAlert("Chat name set as: " + name);
+    }
+
+    public void joined(boolean b)
+    {
+        joinLeaveButton.setEnabled(!b);
+        joinIPInput.setEnabled(!b);
     }
 
     public void writeChat(String name, String message)
@@ -98,28 +108,36 @@ public class ChatRoom extends JFrame
         public void actionPerformed(ActionEvent e)
         {
             String ip = joinIPInput.getText();
-            if (isValidIP(ip))
+            if (isValidIP(ip) && !ip.substring(0, 3).equals("127"))
             {
                 System.out.println("Attempting to connect to " + ip + ":2121");
                 Program.c.connectTo(ip, 2121);
             }
             else
             {
-                System.out.println(ip + " is not a valid IP address.");
+                if(ip.length() > 0) //no loopback support
+                    writeAlert("You cannot connect to " + ip);
             }
         }
     }
 
-    class SetNameListener implements ActionListener
+    class ChatNameListener implements FocusListener
     {
         @Override
-        public void actionPerformed(ActionEvent e)
+        public void focusGained(FocusEvent e)
+        { /* do nothing? */ }
+
+        @Override
+        public void focusLost(FocusEvent e)
         {
             String name = chatNameInput.getText();
-            PacketWriter pw = new PacketWriter(Header.CHAT_NAME);
-            pw.writeString(name);
-            Program.c.sendAll(pw);
-            setName(name);
+            if(!name.equals(getName()))
+            {
+                PacketWriter pw = new PacketWriter(Header.CHAT_NAME);
+                pw.writeString(name);
+                Program.c.sendAll(pw);
+                setName(name);
+            }
         }
     }
 

@@ -12,6 +12,7 @@ import java.net.ServerSocket;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 
 public class Client
 {
@@ -30,12 +31,15 @@ public class Client
     //List of IPs that will be white listed for 1 connect
     public ArrayList<String> aList; //allow list
 
+    private HashSet<String> rSet;
+
     public Client()
     {
         cList = new HashMap<>();
         jList = new HashMap<>();
         wList = new HashMap<>();
         aList = new ArrayList<>();
+        rSet  = new HashSet<>();
 
         //Initialize command line parser.  Not needed for GUI version
         p = new Parser();
@@ -80,10 +84,16 @@ public class Client
 
     public void connectTo(String ip, int port)
     {
-        if(cList.size() > 0)
-            Program.chatRoom.writeAlert("Client currently only supports 1 chat");
-        if(wList.get(ip) != null)
+        if(cList.get(ip) != null)
+        {
+            Program.chatRoom.writeAlert("Already connected to " + ip);
+            return;
+        }
+        else if(wList.get(ip) != null)
+        {
             Program.chatRoom.writeAlert("Already requesting connection from " + ip);
+            return;
+        }
 
         Connection conn = new Connection(this, ip, port);
         try
@@ -119,6 +129,8 @@ public class Client
                 pw.writeString(myIP);
                 conn.sendPacket(pw);
             }
+            //TODO: if whitelist auto accept
+            //TODO: if blacklist auto reject
             else //Add connection to request list
             {
                 //Add request if it doesn't exist
@@ -142,6 +154,10 @@ public class Client
         if (conn == null)
             throw new IllegalStateException("Not connected to " + ip);
 
+        rSet.clear();
+        for(String s : cList.keySet())
+            rSet.add(s);
+
         //Tell all peers to allow this new connection
         PacketWriter pw = new PacketWriter(Header.ALLOW);
         pw.writeString(ip); //IP of client being accepted
@@ -153,10 +169,15 @@ public class Client
         pw.writeString(myIP);
         conn.sendPacket(pw);
 
+        //Send chat room name
+        pw = new PacketWriter(Header.CHAT_NAME);
+        pw.writeString(Program.chatRoom.getName());
+        conn.sendPacket(pw);
+
         //TODO: Don't remove this until you are finished forwarding?
         if(cList.size() == 0)
             jList.remove(ip); //Remove from joining list
-        //Might want to delay a little before adding?
+
         addConnection(conn);
     }
 
@@ -184,6 +205,7 @@ public class Client
             cList.put(connName, conn);
             Program.chatRoom.addContact(connName);
             Program.chatRoom.writeAlert(conn + " has connected.");
+            Program.chatRoom.joined(true);
         }
         else
         {
@@ -201,6 +223,9 @@ public class Client
         {
             Program.chatRoom.writeAlert(ip + " has disconnected.");
             Program.chatRoom.removeContact(ip);
+            rSet.remove(ip);
+            if(cList.size() == 0)
+                Program.chatRoom.joined(false);
         }
     }
 
@@ -223,6 +248,7 @@ public class Client
                     case 1: //accept
                         addConnection(actionC);
                         Program.chatRoom.writeAlert("Connection accepted");
+                        //Program.chatRoom.joined(true);
                         wList.remove(actionC);
                         break;
                     case 2: //reject
@@ -239,20 +265,24 @@ public class Client
                 aList.add(allowIP); //Add this ip to allow list
                 PacketWriter apw = new PacketWriter(Header.ALLOW_RSP);
                 apw.writeString(allowIP); //respond with allowed ip
-                //apw.writeString(myIP); //respond with my IP aka conn.getIP()
                 conn.sendPacket(apw);
                 break;
             case Header.ALLOW_RSP: //Forwarded allowed ip
                 String forwardIP = pr.readString(); //IP of peer that will accept new connection
                 PacketWriter fpw = new PacketWriter(Header.FORWARD);
                 fpw.writeString(conn.getIP());
-                //need to send this packet to other connection...
 
-                //ERROR: FORWARDIP lookup returns nothing!!
-                System.out.println("Join List:");
+                /*System.out.println("Join List:");
                 for(String s : jList.keySet())
-                    System.out.println(s);
+                    System.out.println(s);*/
                 jList.get(forwardIP).sendPacket(fpw);
+
+                rSet.remove(conn.getIP());
+                if(rSet.size() == 0)
+                {
+                    jList.remove(forwardIP);
+                    System.out.println(forwardIP + " has been fully forwarded.");
+                }
                 break;
             case Header.FORWARD:
                 connectTo(pr.readString(), 2121); //connect to forwarded peer

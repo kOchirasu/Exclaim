@@ -7,7 +7,6 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.EOFException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -130,21 +129,15 @@ public class Connection implements Runnable
 
                 c.OnPacket(this, new PacketReader(dCiph.doFinal(recvP)));
             }
-            catch (EOFException ex)
-            {
-                System.out.println("EOFEXCEPTION=disconnect");
-                disconnect();
-                break;
-            }
             catch(IOException ex)
             {
-                System.out.println("IOException=disconnect");
                 disconnect();
                 break;
             }
             catch(Exception ex)
             {
-                System.out.println("etcEXCEPTION");
+                System.out.println("Something went wrong.  Not disconnect.");
+                ex.printStackTrace();
                 break;
             }
         }
