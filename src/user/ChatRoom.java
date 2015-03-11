@@ -5,6 +5,10 @@ import tools.Validate;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.text.AbstractDocument;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.DocumentFilter;
 import java.awt.event.*;
 
 import static tools.Validate.isValidIP;
@@ -19,6 +23,8 @@ public class ChatRoom extends JFrame
     private JTextArea chatBox;
     private JButton joinLeaveButton;
     private JTextField joinIPInput;
+    private JButton setNameButton;
+    private JTextField chatNameInput;
 
     public ChatRoom()
     {
@@ -28,6 +34,7 @@ public class ChatRoom extends JFrame
         setContentPane(chatPanel);
         setSize(600, 450);
 
+        ((AbstractDocument) chatNameInput.getDocument()).setDocumentFilter(new LimitDocumentFilter(20));
         //Need for adding to list
         contactModel = new DefaultListModel();
         contactList.setModel(contactModel);
@@ -35,6 +42,7 @@ public class ChatRoom extends JFrame
 
         sendButton.addActionListener(new SendChatListener());
         joinLeaveButton.addActionListener(new JoinLeaveListener());
+        setNameButton.addActionListener(new SetNameListener());
 
         joinIPInput.addFocusListener(new JoinIPListener());
 
@@ -51,6 +59,12 @@ public class ChatRoom extends JFrame
     public void removeContact(String name)
     {
         contactModel.removeElement(name);
+    }
+
+    public void setName(String name)
+    {
+        chatNameInput.setText(name);
+        writeAlert("Chat name set as: " + name);
     }
 
     public void writeChat(String name, String message)
@@ -96,6 +110,19 @@ public class ChatRoom extends JFrame
         }
     }
 
+    class SetNameListener implements ActionListener
+    {
+        @Override
+        public void actionPerformed(ActionEvent e)
+        {
+            String name = chatNameInput.getText();
+            PacketWriter pw = new PacketWriter(Header.CHAT_NAME);
+            pw.writeString(name);
+            Program.c.sendAll(pw);
+            setName(name);
+        }
+    }
+
     class SendChatListener implements ActionListener
     {
         @Override
@@ -103,8 +130,7 @@ public class ChatRoom extends JFrame
         {
             PacketWriter pw = new PacketWriter(Header.CHAT);
             pw.writeString(chatInput.getText());
-            for (String s : Program.c.cList.keySet())
-                Program.c.cList.get(s).sendPacket(pw);
+            Program.c.sendAll(pw);
             writeChat("Me", chatInput.getText());
             chatInput.setText("");
         }
@@ -164,5 +190,31 @@ public class ChatRoom extends JFrame
                 System.out.println("Removing not implemented");
             }
         }
+    }
+
+    class LimitDocumentFilter extends DocumentFilter
+    {
+
+        private int limit;
+
+        public LimitDocumentFilter(int limit) {
+            if (limit <= 0) {
+                throw new IllegalArgumentException("Limit can not be <= 0");
+            }
+            this.limit = limit;
+        }
+
+        @Override
+        public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs) throws BadLocationException {
+            int currentLength = fb.getDocument().getLength();
+            int overLimit = (currentLength + text.length()) - limit - length;
+            if (overLimit > 0) {
+                text = text.substring(0, text.length() - overLimit);
+            }
+            if (text.length() > 0) {
+                super.replace(fb, offset, length, text, attrs);
+            }
+        }
+
     }
 }

@@ -132,39 +132,38 @@ public class Connection implements Runnable
             }
             catch (EOFException ex)
             {
-                System.out.println("EOFEXCEPTION");
+                System.out.println("EOFEXCEPTION=disconnect");
                 disconnect();
                 break;
             }
-            catch (IOException ex)
+            catch(IOException ex)
             {
-                System.out.println("IOEXCEPTION");
+                System.out.println("IOException=disconnect");
                 disconnect();
                 break;
             }
             catch(Exception ex)
             {
                 System.out.println("etcEXCEPTION");
-                disconnect();
                 break;
             }
         }
     }
 
-    public void sendPacket(PacketWriter p)
+    public void sendPacket(PacketWriter pw)
     {
         if (!sock.isConnected())
             throw new IllegalStateException("Connection has not been established");
         if (!encrypted)
             throw new IllegalStateException("Handshake has not been received");
 
-        byte[] packet = p.toByteArray();
+        byte[] packet = pw.toByteArray();
         if (packet.length < 1)
             throw new IllegalArgumentException("Invalid packet length " + packet.length);
 
         try
         {
-            byte[] encryptedSend = eCiph.doFinal(p.toByteArray());
+            byte[] encryptedSend = eCiph.doFinal(pw.toByteArray());
             out.writeInt(encryptedSend.length);
             out.write(encryptedSend);
             //System.out.println("[SEND] " + p); //print packet

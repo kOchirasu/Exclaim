@@ -72,8 +72,19 @@ public class Client
         }
     }
 
+    public void sendAll(PacketWriter pw)
+    {
+        for(String s : cList.keySet())
+            cList.get(s).sendPacket(pw);
+    }
+
     public void connectTo(String ip, int port)
     {
+        if(cList.size() > 0)
+            Program.chatRoom.writeAlert("Client currently only supports 1 chat");
+        if(wList.get(ip) != null)
+            Program.chatRoom.writeAlert("Already requesting connection from " + ip);
+
         Connection conn = new Connection(this, ip, port);
         try
         {
@@ -110,8 +121,12 @@ public class Client
             }
             else //Add connection to request list
             {
-                jList.put(conn.getIP(), conn);
-                Program.mainProg.addRequest(conn.getIP());
+                //Add request if it doesn't exist
+                if(!jList.containsKey(conn.getIP()))
+                {
+                    jList.put(conn.getIP(), conn);
+                    Program.mainProg.addRequest(conn.getIP());
+                }
             }
         }
         catch (Exception ex)
@@ -130,8 +145,7 @@ public class Client
         //Tell all peers to allow this new connection
         PacketWriter pw = new PacketWriter(Header.ALLOW);
         pw.writeString(ip); //IP of client being accepted
-        for(String s : cList.keySet())
-            cList.get(s).sendPacket(pw);
+        sendAll(pw);
 
         //Respond with and accept message
         pw = new PacketWriter(Header.ACTION);
@@ -164,7 +178,6 @@ public class Client
 
     private void addConnection(Connection conn)
     {
-        //TODO: MAKE A BETTER FIX (Maybe prevent this from being possible)
         String connName = conn.getIP();
         if (!cList.containsKey(connName))
         {
@@ -172,15 +185,9 @@ public class Client
             Program.chatRoom.addContact(connName);
             Program.chatRoom.writeAlert(conn + " has connected.");
         }
-        else //TODO:Problem is that this removes initial connection as well
+        else
         {
-            if(connName.equals("127.0.0.1")) //TODO: Really weird results... Better remove before finalizing
-                connName += " " + (int)(Math.random() * 99);
-            cList.put(connName, conn);
-            Program.chatRoom.addContact(connName);
-            Program.chatRoom.writeAlert(conn + " has connected.");
-            /*Program.chatRoom.writeAlert("Already connected to " + conn + ".");
-            conn.disconnect();*/
+            Program.chatRoom.writeAlert("Already connected to " + connName);
         }
     }
 
@@ -249,6 +256,9 @@ public class Client
                 break;
             case Header.FORWARD:
                 connectTo(pr.readString(), 2121); //connect to forwarded peer
+                break;
+            case Header.CHAT_NAME:
+                Program.chatRoom.setName(pr.readString());
                 break;
             case Header.DISCONNECT: //Not really used
                 Program.chatRoom.writeAlert(conn + " has disconnected.");
