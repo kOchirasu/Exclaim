@@ -14,7 +14,7 @@ public class MessageCommand implements Command
     {
         if (cmd.length == 3)
         {
-            Connection dest = c.cList.get(cmd[1]);
+            Connection dest = c.chatList.get(cmd[1]);
             if (dest != null)
             {
                 PacketWriter pw = new PacketWriter(Header.CHAT);

@@ -14,8 +14,8 @@ public class ListCommand implements Command
             {
                 case "connections":
                     c.println("Active connections: ");
-                    for (String s : c.cList.keySet())
-                        c.println(s + ": " + c.cList.get(s));
+                    for (String s : c.chatList.keySet())
+                        c.println(s + ": " + c.chatList.get(s));
                     break;
 
                 default:

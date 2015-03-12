@@ -50,6 +50,7 @@ public class ChatRoom extends JFrame
         super.setName(chatNameInput.getText());
 
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        addWindowListener(new WindowEventListener());
 
         setVisible(true);
     }
@@ -107,7 +108,7 @@ public class ChatRoom extends JFrame
         @Override
         public void actionPerformed(ActionEvent e)
         {
-            String ip = joinIPInput.getText();
+            String ip = joinIPInput.getText().trim();
             if (isValidIP(ip) && !ip.substring(0, 3).equals("127"))
             {
                 System.out.println("Attempting to connect to " + ip + ":2121");

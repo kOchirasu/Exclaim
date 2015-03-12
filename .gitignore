@@ -1,11 +1,13 @@
 *.class
 *~
 *.iml
+*.ser
 .project
 .classpath
 .settings
 .idea
 bin/*
+out/*
 
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/

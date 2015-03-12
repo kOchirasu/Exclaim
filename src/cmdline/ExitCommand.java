@@ -17,8 +17,8 @@ public class ExitCommand implements Command
         {
             c.println("Client closing.");
             PacketWriter pw = new PacketWriter(Header.DISCONNECT);
-            for (String s : c.cList.keySet())
-                c.cList.get(s).sendPacket(pw);
+            for (String s : c.chatList.keySet())
+                c.chatList.get(s).sendPacket(pw);
             System.exit(0);
         }
         c.println(usage());

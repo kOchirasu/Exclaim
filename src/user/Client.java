@@ -18,26 +18,28 @@ public class Client
 {
     public String myIP;
     public Parser p;
-    //cList: Connection List - Maps IP to Connection
+    //chatList: Connection List - Maps IP to Connection
     //List of active connections which have been accepted
-    public HashMap<String, Connection> cList;
-    //jList: Join List - Maps IP to Connection
+    public HashMap<String, Connection> chatList;
+    //joinList: Join List - Maps IP to Connection
     //List of connections requesting to join chat
-    public HashMap<String, Connection> jList;
-    //wList: Wait List - Maps IP to Connection
+    public HashMap<String, Connection> joinList;
+    //waitList: Wait List - Maps IP to Connection
     //List of connections waiting to join
-    public HashMap<String, Connection> wList;
-    //aList: Allow List - IP
-    //List of IPs that will be white listed for 1 connect
+    public HashMap<String, Connection> waitList;
+    //autoList: Maps IP to a boolean value signifying whether or not to auto-allow
+    //Used for whitelist and blacklist auto accept/reject
     public ArrayList<String> aList; //allow list
 
+    //Used to keep track of which IP you told to allow
+    //Removes ip once they respond or disconnect
     private HashSet<String> rSet;
 
     public Client()
     {
-        cList = new HashMap<>();
-        jList = new HashMap<>();
-        wList = new HashMap<>();
+        chatList = new HashMap<>();
+        joinList = new HashMap<>();
+        waitList = new HashMap<>();
         aList = new ArrayList<>();
         rSet  = new HashSet<>();
 
@@ -78,18 +80,18 @@ public class Client
 
     public void sendAll(PacketWriter pw)
     {
-        for(String s : cList.keySet())
-            cList.get(s).sendPacket(pw);
+        for(String s : chatList.keySet())
+            chatList.get(s).sendPacket(pw);
     }
 
     public void connectTo(String ip, int port)
     {
-        if(cList.get(ip) != null)
+        if(chatList.get(ip) != null)
         {
             Program.chatRoom.writeAlert("Already connected to " + ip);
             return;
         }
-        else if(wList.get(ip) != null)
+        else if(waitList.get(ip) != null)
         {
             Program.chatRoom.writeAlert("Already requesting connection from " + ip);
             return;
@@ -100,7 +102,7 @@ public class Client
         {
             conn.init();
             //Don't actually add connection until it is accepted
-            wList.put(ip, conn); //Store IP in waitlist
+            waitList.put(ip, conn); //Store IP in waitlist
             //addConnection(conn);
         }
         catch (Exception ex)
@@ -116,11 +118,12 @@ public class Client
         try
         {
             conn.init();
+            String ip = conn.getIP();
 
             //Check if connection is on allowed list.  If it is allow the connection and remove from allow list
-            if(aList.contains(conn.getIP()))
+            if(aList.contains(ip))
             {
-                aList.remove(conn.getIP());
+                aList.remove(ip);
                 addConnection(conn);
 
                 //Respond with and accept message
@@ -129,33 +132,43 @@ public class Client
                 pw.writeString(myIP);
                 conn.sendPacket(pw);
             }
-            //TODO: if whitelist auto accept
-            //TODO: if blacklist auto reject
             else //Add connection to request list
             {
                 //Add request if it doesn't exist
-                if(!jList.containsKey(conn.getIP()))
+                if(!joinList.containsKey(ip))
                 {
-                    jList.put(conn.getIP(), conn);
-                    Program.mainProg.addRequest(conn.getIP());
+                    joinList.put(ip, conn);
+                    if(Program.autoList.containsKey(ip))
+                    {
+                        if(Program.autoList.get(ip))
+                            chatAccept(ip);
+                        else
+                            chatReject(ip);
+                    }
+                    else
+                    {
+                        //System.out.println("Adding request " + ip);
+                        Program.mainProg.addRequest(ip);
+                    }
                 }
             }
         }
         catch (Exception ex)
         {
             System.out.println("Connection failed.");
-            //ex.printStackTrace();
+            ex.printStackTrace();
         }
     }
 
     public void chatAccept(String ip)
     {
-        Connection conn = jList.get(ip);
+        System.out.println("Accepting " + ip);
+        Connection conn = joinList.get(ip);
         if (conn == null)
             throw new IllegalStateException("Not connected to " + ip);
 
         rSet.clear();
-        for(String s : cList.keySet())
+        for(String s : chatList.keySet())
             rSet.add(s);
 
         //Tell all peers to allow this new connection
@@ -174,16 +187,15 @@ public class Client
         pw.writeString(Program.chatRoom.getName());
         conn.sendPacket(pw);
 
-        //TODO: Don't remove this until you are finished forwarding?
-        if(cList.size() == 0)
-            jList.remove(ip); //Remove from joining list
+        if(chatList.size() == 0)
+            joinList.remove(ip); //Remove from joining list
 
         addConnection(conn);
     }
 
     public void chatReject(String ip)
     {
-        Connection conn = jList.get(ip);
+        Connection conn = joinList.get(ip);
         if (conn == null)
             throw new IllegalStateException("Not connected to " + ip);
 
@@ -193,16 +205,16 @@ public class Client
         pw.writeString(myIP);
         conn.sendPacket(pw);
 
-        jList.remove(ip);
+        joinList.remove(ip);
         conn.disconnect();
     }
 
     private void addConnection(Connection conn)
     {
         String connName = conn.getIP();
-        if (!cList.containsKey(connName))
+        if (!chatList.containsKey(connName))
         {
-            cList.put(connName, conn);
+            chatList.put(connName, conn);
             Program.chatRoom.addContact(connName);
             Program.chatRoom.writeAlert(conn + " has connected.");
             Program.chatRoom.joined(true);
@@ -215,16 +227,17 @@ public class Client
 
     public void OnDisconnected(String ip)
     {
-        if (cList.remove(ip) == null) //not illegal state if rejected
+        if (chatList.remove(ip) == null) //not illegal state if rejected
         {
-            Program.chatRoom.writeAlert(ip + " has been rejected.");
+            if(waitList.remove(ip) != null)
+                Program.chatRoom.writeAlert(ip + " has has rejected you");
         }
         else
         {
             Program.chatRoom.writeAlert(ip + " has disconnected.");
             Program.chatRoom.removeContact(ip);
             rSet.remove(ip);
-            if(cList.size() == 0)
+            if(chatList.size() == 0)
                 Program.chatRoom.joined(false);
         }
     }
@@ -242,19 +255,19 @@ public class Client
                 break;
             case Header.ACTION:
                 byte aFunc = pr.readByte();
-                Connection actionC = wList.get(pr.readString());
+                Connection actionC = waitList.get(pr.readString());
                 switch(aFunc)
                 {
                     case 1: //accept
                         addConnection(actionC);
                         Program.chatRoom.writeAlert("Connection accepted");
                         //Program.chatRoom.joined(true);
-                        wList.remove(actionC);
+                        waitList.remove(actionC);
                         break;
                     case 2: //reject
-                        wList.get(actionC).disconnect();
+                        waitList.get(actionC).disconnect();
                         Program.chatRoom.writeAlert("Connection rejected");
-                        wList.remove(actionC);
+                        waitList.remove(actionC);
                         break;
                     default:
                         System.out.println("Not a valid action: " + aFunc);
@@ -271,16 +284,12 @@ public class Client
                 String forwardIP = pr.readString(); //IP of peer that will accept new connection
                 PacketWriter fpw = new PacketWriter(Header.FORWARD);
                 fpw.writeString(conn.getIP());
-
-                /*System.out.println("Join List:");
-                for(String s : jList.keySet())
-                    System.out.println(s);*/
-                jList.get(forwardIP).sendPacket(fpw);
+                joinList.get(forwardIP).sendPacket(fpw);
 
                 rSet.remove(conn.getIP());
                 if(rSet.size() == 0)
                 {
-                    jList.remove(forwardIP);
+                    joinList.remove(forwardIP);
                     System.out.println(forwardIP + " has been fully forwarded.");
                 }
                 break;
@@ -292,7 +301,7 @@ public class Client
                 break;
             case Header.DISCONNECT: //Not really used
                 Program.chatRoom.writeAlert(conn + " has disconnected.");
-                cList.remove(conn.getIP());
+                chatList.remove(conn.getIP());
                 Program.chatRoom.removeContact(conn.getIP());
                 break;
             default:

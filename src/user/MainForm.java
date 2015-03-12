@@ -2,10 +2,7 @@ package user;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.event.*;
 
 public class MainForm extends JFrame
 {
@@ -16,6 +13,12 @@ public class MainForm extends JFrame
     private JList whiteList;
     private JList requestList;
     private JPanel mainPanel;
+    private JButton whitelistButton;
+    private JButton blacklistButton;
+    private JButton acceptButton;
+    private JButton rejectButton;
+    private JButton removeWlButton;
+    private JButton removeBlButton;
 
     public MainForm()
     {
@@ -24,8 +27,6 @@ public class MainForm extends JFrame
         setContentPane(mainPanel);
         setSize(500, 300);
         setResizable(false);
-
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         blackModel = new DefaultListModel();
         blackList.setModel(blackModel);
@@ -38,35 +39,49 @@ public class MainForm extends JFrame
         whiteList.addMouseListener(new WhiteMouseListener());
         requestList.addMouseListener(new RequestMouseListener());
 
+        whitelistButton.addActionListener(new WhiteListListener());
+        blacklistButton.addActionListener(new BlackListListener());
+        acceptButton.addActionListener(new AcceptListener());
+        rejectButton.addActionListener(new RejectListener());
+        removeWlButton.addActionListener(new WhiteListener());
+        removeBlButton.addActionListener(new BlackListener());
+
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        addWindowListener(new WindowEventListener());
+
         setVisible(true);
     }
 
-    public void addBlack(String name)
+    public void addBlack(Object name)
     {
         blackModel.addElement(name);
+        Program.autoList.put((String)name, false);
     }
 
-    public void addWhite(String name)
+    public void addWhite(Object name)
     {
         whiteModel.addElement(name);
+        Program.autoList.put((String)name, true);
     }
 
-    public void addRequest(String name)
+    public void addRequest(Object name)
     {
         requestModel.addElement(name);
     }
 
-    public void removeBlack(String name)
+    public void removeBlack(Object name)
     {
         blackModel.removeElement(name);
+        Program.autoList.remove(name);
     }
 
-    public void removeWhite(String name)
+    public void removeWhite(Object name)
     {
         whiteModel.removeElement(name);
+        Program.autoList.remove(name);
     }
 
-    public void removeRequest(String name)
+    public void removeRequest(Object name)
     {
         requestModel.removeElement(name);
     }
@@ -85,8 +100,12 @@ public class MainForm extends JFrame
         {
             if (e.isPopupTrigger())
             {
-                blackMenu.removeItem.setEnabled(requestList.getSelectedIndex() >= 0);
+                blackMenu.removeItem.setEnabled(blackList.getSelectedIndex() >= 0);
                 blackMenu.show(e.getComponent(), e.getX(), e.getY());
+            }
+            if(e.getButton() == 1)
+            {
+                removeBlButton.setEnabled(blackList.getSelectedIndex() >= 0);
             }
         }
     }
@@ -103,14 +122,15 @@ public class MainForm extends JFrame
 
             add(removeItem);
         }
+    }
 
-        class BlackListener implements ActionListener
+    class BlackListener implements ActionListener
+    {
+        @Override
+        public void actionPerformed(ActionEvent e)
         {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                blackModel.removeElement(blackList.getSelectedValue());
-            }
+            removeBlack(blackList.getSelectedValue());
+            removeBlButton.setEnabled(blackList.getSelectedIndex() >= 0);
         }
     }
 
@@ -128,8 +148,12 @@ public class MainForm extends JFrame
         {
             if (e.isPopupTrigger())
             {
-                whiteMenu.removeItem.setEnabled(requestList.getSelectedIndex() >= 0);
+                whiteMenu.removeItem.setEnabled(whiteList.getSelectedIndex() >= 0);
                 whiteMenu.show(e.getComponent(), e.getX(), e.getY());
+            }
+            if(e.getButton() == 1)
+            {
+                removeWlButton.setEnabled(whiteList.getSelectedIndex() >= 0);
             }
         }
     }
@@ -146,14 +170,15 @@ public class MainForm extends JFrame
 
             add(removeItem);
         }
+    }
 
-        class WhiteListener implements ActionListener
+    class WhiteListener implements ActionListener
+    {
+        @Override
+        public void actionPerformed(ActionEvent e)
         {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                whiteModel.removeElement(whiteList.getSelectedValue());
-            }
+            removeWhite(whiteList.getSelectedValue());
+            removeWlButton.setEnabled(whiteList.getSelectedIndex() >= 0);
         }
     }
 
@@ -176,6 +201,13 @@ public class MainForm extends JFrame
                 requestMenu.whiteListItem.setEnabled(requestList.getSelectedIndex() >= 0);
                 requestMenu.blackListItem.setEnabled(requestList.getSelectedIndex() >= 0);
                 requestMenu.show(e.getComponent(), e.getX(), e.getY());
+            }
+            if(e.getButton() == 1)
+            {
+                acceptButton.setEnabled(requestList.getSelectedIndex() >= 0);
+                rejectButton.setEnabled(requestList.getSelectedIndex() >= 0);
+                whitelistButton.setEnabled(requestList.getSelectedIndex() >= 0);
+                blacklistButton.setEnabled(requestList.getSelectedIndex() >= 0);
             }
         }
     }
@@ -204,47 +236,67 @@ public class MainForm extends JFrame
             add(whiteListItem);
             add(blackListItem);
         }
+    }
 
-        class AcceptListener implements ActionListener
+    class AcceptListener implements ActionListener
+    {
+        @Override
+        public void actionPerformed(ActionEvent e)
         {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                String s = (String) requestList.getSelectedValue();
-                requestModel.removeElement(s);
-                Program.c.chatAccept(s);
-            }
+            String s = (String) requestList.getSelectedValue();
+            removeRequest(s);
+            Program.c.chatAccept(s);
+            acceptButton.setEnabled(requestList.getSelectedIndex() >= 0);
+            rejectButton.setEnabled(requestList.getSelectedIndex() >= 0);
+            whitelistButton.setEnabled(requestList.getSelectedIndex() >= 0);
+            blacklistButton.setEnabled(requestList.getSelectedIndex() >= 0);
         }
+    }
 
-        class RejectListener implements ActionListener
+    class RejectListener implements ActionListener
+    {
+        @Override
+        public void actionPerformed(ActionEvent e)
         {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                String s = (String) requestList.getSelectedValue();
-                requestModel.removeElement(s);
-                Program.c.chatReject(s);
-            }
+            String s = (String) requestList.getSelectedValue();
+            removeRequest(s);
+            Program.c.chatReject(s);
+            acceptButton.setEnabled(requestList.getSelectedIndex() >= 0);
+            rejectButton.setEnabled(requestList.getSelectedIndex() >= 0);
+            whitelistButton.setEnabled(requestList.getSelectedIndex() >= 0);
+            blacklistButton.setEnabled(requestList.getSelectedIndex() >= 0);
         }
+    }
 
-        class WhiteListListener implements ActionListener
+    class WhiteListListener implements ActionListener
+    {
+        @Override
+        public void actionPerformed(ActionEvent e)
         {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                whiteModel.addElement(requestList.getSelectedValue());
-                requestModel.removeElement(requestList.getSelectedValue());
-            }
+            Object o = requestList.getSelectedValue();
+            addWhite(o);
+            removeRequest(o);
+            Program.c.chatAccept((String)o);
+            acceptButton.setEnabled(requestList.getSelectedIndex() >= 0);
+            rejectButton.setEnabled(requestList.getSelectedIndex() >= 0);
+            whitelistButton.setEnabled(requestList.getSelectedIndex() >= 0);
+            blacklistButton.setEnabled(requestList.getSelectedIndex() >= 0);
         }
+    }
 
-        class BlackListListener implements ActionListener
+    class BlackListListener implements ActionListener
+    {
+        @Override
+        public void actionPerformed(ActionEvent e)
         {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                blackModel.addElement(requestList.getSelectedValue());
-                requestModel.removeElement(requestList.getSelectedValue());
-            }
+            Object o = requestList.getSelectedValue();
+            addBlack(o);
+            removeRequest(o);
+            Program.c.chatReject((String) o);
+            acceptButton.setEnabled(requestList.getSelectedIndex() >= 0);
+            rejectButton.setEnabled(requestList.getSelectedIndex() >= 0);
+            whitelistButton.setEnabled(requestList.getSelectedIndex() >= 0);
+            blacklistButton.setEnabled(requestList.getSelectedIndex() >= 0);
         }
     }
 }

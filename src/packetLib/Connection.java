@@ -129,15 +129,16 @@ public class Connection implements Runnable
 
                 c.OnPacket(this, new PacketReader(dCiph.doFinal(recvP)));
             }
-            catch(IOException ex)
+            catch(IOException ex) //Disconnected
             {
                 disconnect();
                 break;
             }
-            catch(Exception ex)
+            catch(Exception ex) //Rejected?
             {
-                System.out.println("Something went wrong.  Not disconnect.");
-                ex.printStackTrace();
+                //System.out.println("Something went wrong.  Not disconnect.");
+                //ex.printStackTrace();
+                disconnect();
                 break;
             }
         }
