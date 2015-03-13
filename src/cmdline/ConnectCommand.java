@@ -14,16 +14,16 @@ public class ConnectCommand implements Command
         {
             if (isValidIP(cmd[1]))
             {
-                c.println("Attempting to connect to " + cmd[1] + ":2121");
+                System.out.println("Attempting to connect to " + cmd[1] + ":2121");
                 c.connectTo(cmd[1], 2121);
             }
             else
             {
-                c.println(cmd[1] + " is not a valid IP address.");
+                System.out.println(cmd[1] + " is not a valid IP address.");
             }
         }
         else
-            c.println(usage());
+            System.out.println(usage());
     }
 
     public String usage()

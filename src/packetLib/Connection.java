@@ -55,7 +55,7 @@ public class Connection implements Runnable
         if (request)
         {
             sock = new Socket();
-            sock.connect(new InetSocketAddress(ip, port), 2000);
+            sock.connect(new InetSocketAddress(ip, port), 2000); //timeout 2000ms
         }
         else
         {
@@ -205,10 +205,5 @@ public class Connection implements Runnable
     public String toString()
     {
         return ip + ":" + port;
-    }
-
-    public boolean isConnected()
-    {
-        return sock.isConnected();
     }
 }

@@ -15,13 +15,13 @@ public class ExitCommand implements Command
     {
         if (cmd.length == 1)
         {
-            c.println("Client closing.");
+            System.out.println("Client closing.");
             PacketWriter pw = new PacketWriter(Header.DISCONNECT);
             for (String s : c.chatList.keySet())
                 c.chatList.get(s).sendPacket(pw);
             System.exit(0);
         }
-        c.println(usage());
+        System.out.println(usage());
     }
 
     public String usage()

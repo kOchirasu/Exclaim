@@ -22,7 +22,7 @@ public class MainForm extends JFrame
 
     public MainForm()
     {
-        super("Exclaim Chat Client (Work in Progress)");
+        super("Exclaim: Connection Manager");
         mainPanel.setBorder(new EmptyBorder(7, 7, 7, 7));
         setContentPane(mainPanel);
         setSize(500, 300);

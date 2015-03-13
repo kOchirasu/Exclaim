@@ -9,9 +9,9 @@ public class HelpCommand implements Command
     public void handle(Client c, String[] cmd)
     {
         if (cmd.length == 1)
-            c.println("Available commands: " + c.p);
+            System.out.println("Available commands: " + c.p);
         else
-            c.println(usage());
+            System.out.println(usage());
     }
 
     public String usage()

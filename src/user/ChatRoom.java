@@ -24,10 +24,12 @@ public class ChatRoom extends JFrame
     private JButton joinLeaveButton;
     private JTextField joinIPInput;
     private JTextField chatNameInput;
+    private JButton sendFileButton;
+    private JFileChooser fileChooser;
 
     public ChatRoom()
     {
-        super("Exclaim Chat Room (Work in Progress)");
+        super("Exclaim: Chat Room");
         chatPanel.setBorder(new EmptyBorder(7, 7, 7, 7));
 
         setContentPane(chatPanel);
@@ -37,7 +39,8 @@ public class ChatRoom extends JFrame
         //Need for adding to list
         contactModel = new DefaultListModel();
         contactList.setModel(contactModel);
-        //contactList.addMouseListener(new ContactMouseListener());
+        contactList.addMouseListener(new ContactMouseListener());
+        sendFileButton.addActionListener(new SendFileListener());
 
         sendButton.addActionListener(new SendChatListener());
         joinLeaveButton.addActionListener(new JoinLeaveListener());
@@ -52,6 +55,10 @@ public class ChatRoom extends JFrame
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         addWindowListener(new WindowEventListener());
 
+        fileChooser = new JFileChooser();
+        fileChooser.setApproveButtonText("Send");
+        fileChooser.setDialogTitle("Choose a file to send...");
+
         setVisible(true);
     }
 
@@ -63,6 +70,7 @@ public class ChatRoom extends JFrame
     public void removeContact(String name)
     {
         contactModel.removeElement(name);
+        sendFileButton.setEnabled(contactList.getSelectedIndex() >= 0);
     }
 
     public void setName(String name)
@@ -98,8 +106,10 @@ public class ChatRoom extends JFrame
         @Override
         public void focusLost(FocusEvent e)
         {
-            if (!Validate.isValidIP(joinIPInput.getText()))
+            if (!Validate.isValidIP(joinIPInput.getText().trim()))
                 joinIPInput.setText("");
+            else
+                joinIPInput.setText(joinIPInput.getText().trim());
         }
     }
 
@@ -169,30 +179,38 @@ public class ChatRoom extends JFrame
         {
             if (e.isPopupTrigger())
             {
-                contactMenu.removeItem.setEnabled(contactList.getSelectedIndex() >= 0);
+                contactMenu.sendFileItem.setEnabled(contactList.getSelectedIndex() >= 0);
                 contactMenu.show(e.getComponent(), e.getX(), e.getY());
+            }
+            if(e.getButton() == 1)
+            {
+                sendFileButton.setEnabled(contactList.getSelectedIndex() >= 0);
             }
         }
     }
 
     class ContactRightMenu extends JPopupMenu
     {
-        final JMenuItem addItem;
-        final JMenuItem removeItem;
+        //final JMenuItem addItem;
+        //final JMenuItem removeItem;
+        final JMenuItem sendFileItem;
 
         public ContactRightMenu()
         {
-            addItem = new JMenuItem("Add Contact");
+            /*addItem = new JMenuItem("Add Contact");
             removeItem = new JMenuItem("Remove Contact");
 
             addItem.addActionListener(new AddContactListener());
             removeItem.addActionListener(new RemoveContactListener());
 
             add(addItem);
-            add(removeItem);
+            add(removeItem);*/
+            sendFileItem = new JMenuItem("Send File");
+            sendFileItem.addActionListener(new SendFileListener());
+            add(sendFileItem);
         }
 
-        class AddContactListener implements ActionListener
+        /*class AddContactListener implements ActionListener
         {
             @Override
             public void actionPerformed(ActionEvent e)
@@ -208,6 +226,22 @@ public class ChatRoom extends JFrame
             {
                 System.out.println("Removing not implemented");
             }
+        }*/
+    }
+
+    class SendFileListener implements ActionListener
+    {
+
+        @Override
+        public void actionPerformed(ActionEvent e)
+        {
+            if(fileChooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION)
+                System.out.println(fileChooser.getSelectedFile());
+            
+            PacketWriter pw = new PacketWriter(Header.FILE_OFFER);
+            pw.writeString(fileChooser.getSelectedFile().getName());
+            pw.writeLong(fileChooser.getSelectedFile().length()); //file size
+            Program.c.chatList.get(contactList.getSelectedValue()).sendPacket(pw);
         }
     }
 

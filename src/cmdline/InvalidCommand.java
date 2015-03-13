@@ -8,7 +8,7 @@ public class InvalidCommand implements Command
 
     public void handle(Client c, String[] cmd)
     {
-        c.println("Invalid command! Use /help");
+        System.out.println("Invalid command! Use /help");
     }
 
     public String usage()

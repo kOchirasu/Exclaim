@@ -24,7 +24,7 @@ public class Listener implements Runnable
 
     public void run()
     {
-        System.out.println("S> Exclaim Chat Server started...");
+        System.out.println("Exclaim Chat Server started...");
         while (true)
         {
             //Wait for some connection

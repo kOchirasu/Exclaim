@@ -22,10 +22,10 @@ public class MessageCommand implements Command
                 dest.sendPacket(pw);
             }
             else
-                c.println(cmd[1] + " is not an active connection.  Use '/list connections' for a list of active connections");
+                System.out.println(cmd[1] + " is not an active connection.  Use '/list connections' for a list of active connections");
         }
         else
-            c.println(usage());
+            System.out.println(usage());
     }
 
     public String usage()

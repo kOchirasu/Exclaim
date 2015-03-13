@@ -5,6 +5,7 @@ import packetLib.Connection;
 import packetLib.PacketReader;
 import packetLib.PacketWriter;
 
+import javax.swing.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -70,7 +71,7 @@ public class Client
     {
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
         String command;
-        println("Exclaim Chat Client Started...");
+        System.out.println("Exclaim Chat Client Started...");
         while (true)
         {
             command = br.readLine();
@@ -251,7 +252,7 @@ public class Client
             case Header.CHAT: //1
                 String msg = pr.readString();
                 //TODO: lookup name instead of using ip:port as name
-                Program.chatRoom.writeChat(conn.toString(), msg);
+                Program.chatRoom.writeChat(conn.getIP(), msg);
                 break;
             case Header.ACTION:
                 byte aFunc = pr.readByte();
@@ -260,14 +261,13 @@ public class Client
                 {
                     case 1: //accept
                         addConnection(actionC);
-                        Program.chatRoom.writeAlert("Connection accepted");
-                        //Program.chatRoom.joined(true);
-                        waitList.remove(actionC);
+                        //Program.chatRoom.writeAlert("Connection accepted");
+                        waitList.remove(actionC.getIP());
                         break;
                     case 2: //reject
                         waitList.get(actionC).disconnect();
-                        Program.chatRoom.writeAlert("Connection rejected");
-                        waitList.remove(actionC);
+                        //Program.chatRoom.writeAlert("Connection rejected");
+                        waitList.remove(actionC.getIP());
                         break;
                     default:
                         System.out.println("Not a valid action: " + aFunc);
@@ -299,6 +299,40 @@ public class Client
             case Header.CHAT_NAME:
                 Program.chatRoom.setName(pr.readString());
                 break;
+            case Header.FILE_OFFER:
+                String foName = pr.readString();
+                long foSize = pr.readLong();
+                PacketWriter fr = new PacketWriter(Header.FILE_REQUEST);
+                String foTitle = "File Transfer from " + conn.getIP();
+                String foMsg1 = "File name: " + foName + "\n";
+                String foMsg2 = "File size: " + foSize + " bytes\n\n";
+                int foReply = JOptionPane.showConfirmDialog(null, foMsg1 + foMsg2 + "Would you like to download this file?", foTitle, JOptionPane.YES_NO_OPTION);
+                if(foReply == JOptionPane.YES_OPTION)
+                {
+                    JFileChooser fileChooser = new JFileChooser();
+                    //fileChooser.setApproveButtonText("Send");
+                    fileChooser.setDialogTitle("Choose a location to save...");
+                    if(fileChooser.showSaveDialog(null) == JFileChooser.APPROVE_OPTION)
+                    {
+                        System.out.println(fileChooser.getSelectedFile());
+                        fr.writeByte(1);
+                        conn.sendPacket(fr);
+                        break;
+                    }
+                }
+                fr.writeByte(0);
+                conn.sendPacket(fr);
+                break;
+            case Header.FILE_REQUEST:
+                if(pr.readByte() == 1)
+                {
+                    System.out.println(conn.getIP() + " accepted file transfer.");
+                }
+                else
+                {
+                    System.out.println(conn.getIP() + " rejected file transfer.");
+                }
+                break;
             case Header.DISCONNECT: //Not really used
                 Program.chatRoom.writeAlert(conn + " has disconnected.");
                 chatList.remove(conn.getIP());
@@ -316,10 +350,5 @@ public class Client
         p.add("connect", new ConnectCommand());
         p.add("list", new ListCommand());
         p.add("message,msg", new MessageCommand());
-    }
-
-    public void println(String s)
-    {
-        System.out.println("C> " + s);
     }
 }

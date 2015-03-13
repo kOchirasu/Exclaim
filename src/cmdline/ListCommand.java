@@ -13,17 +13,17 @@ public class ListCommand implements Command
             switch (cmd[1])
             {
                 case "connections":
-                    c.println("Active connections: ");
+                    System.out.println("Active connections: ");
                     for (String s : c.chatList.keySet())
-                        c.println(s + ": " + c.chatList.get(s));
+                        System.out.println(s + ": " + c.chatList.get(s));
                     break;
 
                 default:
-                    c.println("Cannot list " + cmd[1]);
+                    System.out.println("Cannot list " + cmd[1]);
             }
         }
         else
-            c.println(usage());
+            System.out.println(usage());
     }
 
     public String usage()
