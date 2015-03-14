@@ -1,12 +1,14 @@
 package user;
 
 import cmdline.*;
-import packetLib.Connection;
+import packetLib.Connector;
+import packetLib.FileTransfer;
 import packetLib.PacketReader;
 import packetLib.PacketWriter;
 
 import javax.swing.*;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
@@ -21,13 +23,13 @@ public class Client
     public Parser p;
     //chatList: Connection List - Maps IP to Connection
     //List of active connections which have been accepted
-    public HashMap<String, Connection> chatList;
+    public HashMap<String, Connector> chatList;
     //joinList: Join List - Maps IP to Connection
     //List of connections requesting to join chat
-    public HashMap<String, Connection> joinList;
+    public HashMap<String, Connector> joinList;
     //waitList: Wait List - Maps IP to Connection
     //List of connections waiting to join
-    public HashMap<String, Connection> waitList;
+    public HashMap<String, Connector> waitList;
     //autoList: Maps IP to a boolean value signifying whether or not to auto-allow
     //Used for whitelist and blacklist auto accept/reject
     public ArrayList<String> aList; //allow list
@@ -36,6 +38,8 @@ public class Client
     //Removes ip once they respond or disconnect
     private HashSet<String> rSet;
 
+    public HashMap<String, File> fileList;
+
     public Client()
     {
         chatList = new HashMap<>();
@@ -43,6 +47,7 @@ public class Client
         waitList = new HashMap<>();
         aList = new ArrayList<>();
         rSet  = new HashSet<>();
+        fileList = new HashMap<>();
 
         //Initialize command line parser.  Not needed for GUI version
         p = new Parser();
@@ -98,73 +103,57 @@ public class Client
             return;
         }
 
-        Connection conn = new Connection(this, ip, port);
-        try
-        {
-            conn.init();
-            //Don't actually add connection until it is accepted
-            waitList.put(ip, conn); //Store IP in waitlist
-            //addConnection(conn);
-        }
-        catch (Exception ex)
-        {
-            Program.chatRoom.writeAlert("Unable to connect to " + conn);
-            //ex.printStackTrace();
-        }
+        Connector conn = new Connector(this, ip, port);
+        conn.init();
+        //Don't actually add connection until it is accepted
+        waitList.put(ip, conn); //Store IP in waitlist
     }
 
     public void connectTo(ServerSocket ss)
     {
-        Connection conn = new Connection(this, ss);
-        try
+        Connector conn = new Connector(this, ss);
+
+        conn.init();
+        String ip = conn.getIP();
+
+        //Check if connection is on allowed list.  If it is allow the connection and remove from allow list
+        if(aList.contains(ip))
         {
-            conn.init();
-            String ip = conn.getIP();
+            aList.remove(ip);
+            addConnection(conn);
 
-            //Check if connection is on allowed list.  If it is allow the connection and remove from allow list
-            if(aList.contains(ip))
+            //Respond with and accept message
+            PacketWriter pw = new PacketWriter(Header.ACTION);
+            pw.writeByte(1);
+            pw.writeString(myIP);
+            conn.sendPacket(pw);
+        }
+        else //Add connection to request list
+        {
+            //Add request if it doesn't exist
+            if(!joinList.containsKey(ip))
             {
-                aList.remove(ip);
-                addConnection(conn);
-
-                //Respond with and accept message
-                PacketWriter pw = new PacketWriter(Header.ACTION);
-                pw.writeByte(1);
-                pw.writeString(myIP);
-                conn.sendPacket(pw);
-            }
-            else //Add connection to request list
-            {
-                //Add request if it doesn't exist
-                if(!joinList.containsKey(ip))
+                joinList.put(ip, conn);
+                if(Program.autoList.containsKey(ip))
                 {
-                    joinList.put(ip, conn);
-                    if(Program.autoList.containsKey(ip))
-                    {
-                        if(Program.autoList.get(ip))
-                            chatAccept(ip);
-                        else
-                            chatReject(ip);
-                    }
+                    if(Program.autoList.get(ip))
+                        chatAccept(ip);
                     else
-                    {
-                        //System.out.println("Adding request " + ip);
-                        Program.mainProg.addRequest(ip);
-                    }
+                        chatReject(ip);
+                }
+                else
+                {
+                    //System.out.println("Adding request " + ip);
+                    Program.mainProg.addRequest(ip);
                 }
             }
-        }
-        catch (Exception ex)
-        {
-            System.out.println("Connection failed.");
-            ex.printStackTrace();
         }
     }
 
     public void chatAccept(String ip)
     {
         System.out.println("Accepting " + ip);
-        Connection conn = joinList.get(ip);
+        Connector conn = joinList.get(ip);
         if (conn == null)
             throw new IllegalStateException("Not connected to " + ip);
 
@@ -196,7 +185,7 @@ public class Client
 
     public void chatReject(String ip)
     {
-        Connection conn = joinList.get(ip);
+        Connector conn = joinList.get(ip);
         if (conn == null)
             throw new IllegalStateException("Not connected to " + ip);
 
@@ -210,7 +199,7 @@ public class Client
         conn.disconnect();
     }
 
-    private void addConnection(Connection conn)
+    private void addConnection(Connector conn)
     {
         String connName = conn.getIP();
         if (!chatList.containsKey(connName))
@@ -243,7 +232,7 @@ public class Client
         }
     }
 
-    public void OnPacket(Connection conn, PacketReader pr)
+    public void OnPacket(Connector conn, PacketReader pr)
     {
         //System.out.println("[RECV] " + pr.toHexString()); //print packet
         byte header = pr.readByte();
@@ -256,7 +245,7 @@ public class Client
                 break;
             case Header.ACTION:
                 byte aFunc = pr.readByte();
-                Connection actionC = waitList.get(pr.readString());
+                Connector actionC = waitList.get(pr.readString());
                 switch(aFunc)
                 {
                     case 1: //accept
@@ -303,30 +292,43 @@ public class Client
                 String foName = pr.readString();
                 long foSize = pr.readLong();
                 PacketWriter fr = new PacketWriter(Header.FILE_REQUEST);
-                String foTitle = "File Transfer from " + conn.getIP();
-                String foMsg1 = "File name: " + foName + "\n";
-                String foMsg2 = "File size: " + foSize + " bytes\n\n";
-                int foReply = JOptionPane.showConfirmDialog(null, foMsg1 + foMsg2 + "Would you like to download this file?", foTitle, JOptionPane.YES_NO_OPTION);
-                if(foReply == JOptionPane.YES_OPTION)
+                File fo = fileOffer(conn.getIP(), foName, foSize);
+                if(fo != null)
                 {
-                    JFileChooser fileChooser = new JFileChooser();
-                    //fileChooser.setApproveButtonText("Send");
-                    fileChooser.setDialogTitle("Choose a location to save...");
-                    if(fileChooser.showSaveDialog(null) == JFileChooser.APPROVE_OPTION)
+                    fr.writeByte(1);
+                    try
                     {
-                        System.out.println(fileChooser.getSelectedFile());
-                        fr.writeByte(1);
-                        conn.sendPacket(fr);
-                        break;
+                        ServerSocket foSock = new ServerSocket(0);
+                        fr.writeInt(foSock.getLocalPort()); //Maybe can use short if it handles signed values properly
+                        fr.writeString(fo.getName());
+                        FileTransfer ftS = new FileTransfer(foSock);
+                        ftS.setFile(fo);
+                        new Thread(ftS).start(); //will this hang if file sender disconnects?
+                    }
+                    catch(Exception ex)
+                    {
+                        ex.printStackTrace();
                     }
                 }
-                fr.writeByte(0);
+                else
+                    fr.writeByte(0);
                 conn.sendPacket(fr);
                 break;
             case Header.FILE_REQUEST:
                 if(pr.readByte() == 1)
                 {
                     System.out.println(conn.getIP() + " accepted file transfer.");
+                    try
+                    {
+                        FileTransfer frC = new FileTransfer(conn.getIP(), pr.readInt());
+                        frC.init();
+                        frC.sendFile(fileList.get(pr.readString()));
+                    }
+                    catch(Exception ex) //dont need?
+                    {
+                        ex.printStackTrace();
+                        System.out.println("File transfer failed...");
+                    }
                 }
                 else
                 {
@@ -341,6 +343,25 @@ public class Client
             default:
                 System.out.println("Invalid Packet Header: " + header);
         }
+    }
+
+    private File fileOffer(String ip, String fileName, long size)
+    {
+        String foTitle = "File Transfer from " + ip;
+        String foMsg1 = "File name: " + fileName + "\n";
+        String foMsg2 = "File size: " + size + " bytes\n\n";
+        int foReply = JOptionPane.showConfirmDialog(null, foMsg1 + foMsg2 + "Would you like to download this file?", foTitle, JOptionPane.YES_NO_OPTION);
+        if(foReply == JOptionPane.YES_OPTION)
+        {
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Choose a location to save...");
+            fileChooser.setSelectedFile(new File(fileName));
+            if(fileChooser.showSaveDialog(null) == JFileChooser.APPROVE_OPTION)
+            {
+                return fileChooser.getSelectedFile();
+            }
+        }
+        return null;
     }
 
     private void initParser()

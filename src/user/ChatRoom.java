@@ -236,12 +236,14 @@ public class ChatRoom extends JFrame
         public void actionPerformed(ActionEvent e)
         {
             if(fileChooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION)
+            {
                 System.out.println(fileChooser.getSelectedFile());
-            
-            PacketWriter pw = new PacketWriter(Header.FILE_OFFER);
-            pw.writeString(fileChooser.getSelectedFile().getName());
-            pw.writeLong(fileChooser.getSelectedFile().length()); //file size
-            Program.c.chatList.get(contactList.getSelectedValue()).sendPacket(pw);
+                Program.c.fileList.put(fileChooser.getSelectedFile().getName(), fileChooser.getSelectedFile());
+                PacketWriter pw = new PacketWriter(Header.FILE_OFFER);
+                pw.writeString(fileChooser.getSelectedFile().getName());
+                pw.writeLong(fileChooser.getSelectedFile().length()); //file size
+                Program.c.chatList.get(contactList.getSelectedValue()).sendPacket(pw);
+            }
         }
     }
 

@@ -1,6 +1,6 @@
 package cmdline;
 
-import packetLib.Connection;
+import packetLib.Connector;
 import packetLib.PacketWriter;
 import user.Client;
 import user.Header;
@@ -14,7 +14,7 @@ public class MessageCommand implements Command
     {
         if (cmd.length == 3)
         {
-            Connection dest = c.chatList.get(cmd[1]);
+            Connector dest = c.chatList.get(cmd[1]);
             if (dest != null)
             {
                 PacketWriter pw = new PacketWriter(Header.CHAT);

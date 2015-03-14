@@ -1,40 +1,36 @@
 package packetLib;
 
-import user.Client;
-
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 
 import static tools.Validate.isValidIP;
 
-public class Connection implements Runnable
+public class Connection
 {
-    private final String AES_KEY = "Ulng9bhk9uYrSgps";
-    private String name, ip;
-    private int port;
-    private DataInputStream in;
-    private DataOutputStream out;
-    private Client c;
-    private Socket sock;
+    private final String AES_KEY;
     private ServerSocket ss;
-    private Cipher eCiph, dCiph;
-    private boolean request, encrypted;
+
+    protected String name, ip;
+    protected int port;
+    protected DataInputStream in;
+    protected DataOutputStream out;
+    protected Socket sock;
+    protected Cipher eCiph, dCiph;
+    protected boolean request, encrypted;
 
     /* Creates a new connection (outgoing request)
      *
      */
-    public Connection(Client c, String ip, int port)
+    public Connection(String ip, int port, String key)
     {
-        this.c = c;
+        AES_KEY = key;
         setIP(ip);
         setPort(port);
         request = true;
@@ -43,140 +39,83 @@ public class Connection implements Runnable
     /* Creates a new connection (incoming request)
      *
      */
-    public Connection(Client c, ServerSocket ss)
+    public Connection(ServerSocket ss, String key)
     {
-        this.c = c;
+        AES_KEY = key;
         this.ss = ss;
         request = false;
     }
 
-    public void init() throws IOException, GeneralSecurityException
+    public void init()// throws IOException, GeneralSecurityException
     {
-        if (request)
+        try
         {
-            sock = new Socket();
-            sock.connect(new InetSocketAddress(ip, port), 2000); //timeout 2000ms
-        }
-        else
-        {
-            sock = ss.accept();
-            setIP(sock.getInetAddress().toString().substring(1));
-            setPort(sock.getPort());
-        }
-        System.out.println("Connection established with " + sock.getRemoteSocketAddress());
-
-        //Initialize Streams
-        in = new DataInputStream(sock.getInputStream());
-        out = new DataOutputStream(sock.getOutputStream());
-
-        //Handshakes
-        if (request)
-        {
-            /* Begin Client Handshake */
-            int length = in.readInt();
-            byte[] recvP = new byte[length];
-            in.read(recvP);
-
-            SecretKeySpec key = new SecretKeySpec(AES_KEY.getBytes(), "AES");
-            PacketReader pr = new PacketReader(recvP);
-            pr.readByte();
-
-            dCiph = Cipher.getInstance("AES/CBC/PKCS5Padding");
-            dCiph.init(Cipher.DECRYPT_MODE, key, new IvParameterSpec(pr.readBytes(16)));
-
-            eCiph = Cipher.getInstance("AES/CBC/PKCS5Padding");
-            eCiph.init(Cipher.ENCRYPT_MODE, key, new IvParameterSpec(pr.readBytes(16)));
-            encrypted = true;
-        }
-        else
-        {
-            /* Begin Server Handshake */
-            setIP(sock.getInetAddress().toString().substring(1));
-            setPort(sock.getPort());
-            //Handshake
-            SecretKeySpec key = new SecretKeySpec(AES_KEY.getBytes(), "AES");
-            SecureRandom sr = new SecureRandom();
-            PacketWriter pw = new PacketWriter(255);
-            byte[] iv = new byte[16];
-
-            sr.nextBytes(iv);
-            pw.writeBytes(iv);
-            eCiph = Cipher.getInstance("AES/CBC/PKCS5Padding");
-            eCiph.init(Cipher.ENCRYPT_MODE, key, new IvParameterSpec(iv));
-
-            sr.nextBytes(iv);
-            pw.writeBytes(iv);
-            dCiph = Cipher.getInstance("AES/CBC/PKCS5Padding");
-            dCiph.init(Cipher.DECRYPT_MODE, key, new IvParameterSpec(iv));
-            encrypted = true;
-
-            //Send IV over to client
-            out.writeInt(pw.length());
-            out.write(pw.toByteArray());
-        }
-        new Thread(this).start(); //Start thread for receiving packets
-    }
-
-    public void run()
-    {
-        while (true)
-        {
-            try
+            if (request)
             {
+                sock = new Socket();
+                sock.connect(new InetSocketAddress(ip, port), 2000); //timeout 2000ms
+            }
+            else
+            {
+                sock = ss.accept();
+                setIP(sock.getInetAddress().toString().substring(1));
+                setPort(sock.getPort());
+            }
+            System.out.println("Connection established with " + sock.getRemoteSocketAddress());
+
+            //Initialize Streams
+            in = new DataInputStream(sock.getInputStream());
+            out = new DataOutputStream(sock.getOutputStream());
+
+            //Handshakes
+            if (request)
+            {
+                /* Begin Client Handshake */
                 int length = in.readInt();
                 byte[] recvP = new byte[length];
                 in.read(recvP);
 
-                c.OnPacket(this, new PacketReader(dCiph.doFinal(recvP)));
+                SecretKeySpec key = new SecretKeySpec(AES_KEY.getBytes(), "AES");
+                PacketReader pr = new PacketReader(recvP);
+                pr.readByte();
+
+                dCiph = Cipher.getInstance("AES/CBC/PKCS5Padding");
+                dCiph.init(Cipher.DECRYPT_MODE, key, new IvParameterSpec(pr.readBytes(16)));
+
+                eCiph = Cipher.getInstance("AES/CBC/PKCS5Padding");
+                eCiph.init(Cipher.ENCRYPT_MODE, key, new IvParameterSpec(pr.readBytes(16)));
+                encrypted = true;
             }
-            catch(IOException ex) //Disconnected
+            else
             {
-                disconnect();
-                break;
+                /* Begin Server Handshake */
+                setIP(sock.getInetAddress().toString().substring(1));
+                setPort(sock.getPort());
+                //Handshake
+                SecretKeySpec key = new SecretKeySpec(AES_KEY.getBytes(), "AES");
+                SecureRandom sr = new SecureRandom();
+                PacketWriter pw = new PacketWriter(255);
+                byte[] iv = new byte[16];
+
+                sr.nextBytes(iv);
+                pw.writeBytes(iv);
+                eCiph = Cipher.getInstance("AES/CBC/PKCS5Padding");
+                eCiph.init(Cipher.ENCRYPT_MODE, key, new IvParameterSpec(iv));
+
+                sr.nextBytes(iv);
+                pw.writeBytes(iv);
+                dCiph = Cipher.getInstance("AES/CBC/PKCS5Padding");
+                dCiph.init(Cipher.DECRYPT_MODE, key, new IvParameterSpec(iv));
+                encrypted = true;
+
+                //Send IV over to client
+                out.writeInt(pw.length());
+                out.write(pw.toByteArray());
             }
-            catch(Exception ex) //Rejected?
-            {
-                //System.out.println("Something went wrong.  Not disconnect.");
-                //ex.printStackTrace();
-                disconnect();
-                break;
-            }
         }
-    }
-
-    public void sendPacket(PacketWriter pw)
-    {
-        if (!sock.isConnected())
-            throw new IllegalStateException("Connection has not been established");
-        if (!encrypted)
-            throw new IllegalStateException("Handshake has not been received");
-
-        byte[] packet = pw.toByteArray();
-        if (packet.length < 1)
-            throw new IllegalArgumentException("Invalid packet length " + packet.length);
-
-        try
+        catch(Exception ex)
         {
-            byte[] encryptedSend = eCiph.doFinal(pw.toByteArray());
-            out.writeInt(encryptedSend.length);
-            out.write(encryptedSend);
-            //System.out.println("[SEND] " + p); //print packet
-        }
-        catch (Exception ex)
-        {
-            ex.printStackTrace();
-        }
-    }
-
-    public void disconnect()
-    {
-        try
-        {
-            sock.close();
-            c.OnDisconnected(ip);
-        }
-        catch (Exception ex)
-        {
+            System.out.println("Unable to connect to " + this);
             ex.printStackTrace();
         }
     }
