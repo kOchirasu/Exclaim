@@ -1,5 +1,6 @@
 package packetLib;
 
+import javax.swing.*;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -47,14 +48,14 @@ public class FileTransfer extends Connection implements Runnable
                     recvP = dCiph.doFinal(recvP);
                     //System.out.println("Decrypt: " + Arrays.toString(recvP));
                     outFile.write(recvP);
-                    //System.out.println("Wrote");
                 }
                 outFile.close();
                 System.out.println("finished writing file");
-            }
+                JOptionPane.showMessageDialog(null, "File successfully downloaded.\nSaved at: " + file, "File Transfer", JOptionPane.INFORMATION_MESSAGE);            }
             catch (Exception ex) //File transfer failed
             {
                 System.out.println("File transfer failed...");
+                JOptionPane.showMessageDialog(null, file.getName() + " failed to be received.", "File Transfer", JOptionPane.ERROR_MESSAGE);
                 ex.printStackTrace();
             }
         }
@@ -73,10 +74,9 @@ public class FileTransfer extends Connection implements Runnable
             //out.writeLong(size);
             FileInputStream inFile = new FileInputStream(f);
             byte[] sendP;
-            int length = MAX_BUF;
             while(size > 0)
             {
-                sendP = size >= length ? new byte[MAX_BUF] : new byte[(int) size];
+                sendP = size >= MAX_BUF ? new byte[MAX_BUF] : new byte[(int) size];
 
                 inFile.read(sendP);
                 size -= sendP.length;
@@ -86,10 +86,12 @@ public class FileTransfer extends Connection implements Runnable
             }
             out.writeInt(0); //finished
             System.out.println("File transfer complete");
+            JOptionPane.showMessageDialog(null, "File successfully sent to " + ip, "File Transfer", JOptionPane.INFORMATION_MESSAGE);
         }
         catch(Exception ex)
         {
             System.out.println("File transfer failed...");
+            JOptionPane.showMessageDialog(null, f.getName() + " failed to send.", "File Transfer", JOptionPane.ERROR_MESSAGE);
             ex.printStackTrace();
         }
     }

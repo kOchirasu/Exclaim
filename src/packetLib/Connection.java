@@ -12,7 +12,7 @@ import java.security.SecureRandom;
 
 import static tools.Validate.isValidIP;
 
-public class Connection
+public abstract class Connection
 {
     private final String AES_KEY;
     private ServerSocket ss;

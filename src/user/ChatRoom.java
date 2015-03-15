@@ -84,6 +84,9 @@ public class ChatRoom extends JFrame
     {
         joinLeaveButton.setEnabled(!b);
         joinIPInput.setEnabled(!b);
+        chatNameInput.setEnabled(b);
+        chatInput.setEnabled(b);
+        sendButton.setEnabled(b);
     }
 
     public void writeChat(String name, String message)

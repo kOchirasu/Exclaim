@@ -23,12 +23,15 @@ public class Client
     public Parser p;
     //chatList: Connection List - Maps IP to Connection
     //List of active connections which have been accepted
+    //Used by "Client" & "Server"
     public HashMap<String, Connector> chatList;
     //joinList: Join List - Maps IP to Connection
     //List of connections requesting to join chat
+    //Used by "Server"
     public HashMap<String, Connector> joinList;
     //waitList: Wait List - Maps IP to Connection
     //List of connections waiting to join
+    //Used by "Client"
     public HashMap<String, Connector> waitList;
     //autoList: Maps IP to a boolean value signifying whether or not to auto-allow
     //Used for whitelist and blacklist auto accept/reject
@@ -295,18 +298,20 @@ public class Client
                 File fo = fileOffer(conn.getIP(), foName, foSize);
                 if(fo != null)
                 {
-                    fr.writeByte(1);
                     try
                     {
                         ServerSocket foSock = new ServerSocket(0);
+                        fr.writeByte(1);
                         fr.writeInt(foSock.getLocalPort()); //Maybe can use short if it handles signed values properly
-                        fr.writeString(fo.getName());
+                        fr.writeString(foName); //Doesn't get affected if user saves as another name
                         FileTransfer ftS = new FileTransfer(foSock);
                         ftS.setFile(fo);
                         new Thread(ftS).start(); //will this hang if file sender disconnects?
                     }
-                    catch(Exception ex)
+                    catch(IOException ex)
                     {
+                        fr.writeByte(0);
+                        Program.chatRoom.writeAlert("Failed to start file transfer.");
                         ex.printStackTrace();
                     }
                 }
@@ -317,22 +322,14 @@ public class Client
             case Header.FILE_REQUEST:
                 if(pr.readByte() == 1)
                 {
-                    System.out.println(conn.getIP() + " accepted file transfer.");
-                    try
-                    {
-                        FileTransfer frC = new FileTransfer(conn.getIP(), pr.readInt());
-                        frC.init();
-                        frC.sendFile(fileList.get(pr.readString()));
-                    }
-                    catch(Exception ex) //dont need?
-                    {
-                        ex.printStackTrace();
-                        System.out.println("File transfer failed...");
-                    }
+                    Program.chatRoom.writeAlert(conn.getIP() + " accepted file transfer.");
+                    FileTransfer frC = new FileTransfer(conn.getIP(), pr.readInt());
+                    frC.init();
+                    frC.sendFile(fileList.get(pr.readString()));
                 }
                 else
                 {
-                    System.out.println(conn.getIP() + " rejected file transfer.");
+                    Program.chatRoom.writeAlert(conn.getIP() + " rejected file transfer.");
                 }
                 break;
             case Header.DISCONNECT: //Not really used
